@@ -1,14 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Animated,
-  RefreshControl,
-  Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  ActivityIndicator, Animated, RefreshControl, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -16,113 +9,75 @@ import * as Location from 'expo-location';
 import { useTheme } from '../context/ThemeContext';
 import { GOLD, SPACING, RADIUS, FONTS, SHADOWS } from '../theme';
 import { fetchKural, fetchWeather } from '../api';
+import StarBackground from '../components/StarBackground';
 
 const { width } = Dimensions.get('window');
 
+// ── Interfaces ────────────────────────────────────────────────────────────────
 interface KuralData {
-  number: number;
-  line1: string;
-  line2: string;
-  translation?: string;
-  explanation?: string;
-  chapter?: string;
+  number: number; line1: string; line2: string;
+  porul?: string; chapter?: string;
 }
-
 interface WeatherData {
   location: { name: string; region: string };
-  current: {
-    temp_c: number;
-    condition: { text: string; icon: string };
-    humidity: number;
-    wind_kph: number;
-    feelslike_c: number;
-  };
-  forecast?: {
-    forecastday: Array<{
-      astro: { sunrise: string; sunset: string };
-      day: { maxtemp_c: number; mintemp_c: number };
-    }>;
-  };
+  current: { temp_c: number; condition: { text: string }; humidity: number; wind_kph: number; feelslike_c: number };
+  forecast?: { forecastday: Array<{ astro: { sunrise: string; sunset: string }; day: { maxtemp_c: number; mintemp_c: number } }> };
 }
 
+// ── Main screen ───────────────────────────────────────────────────────────────
 export default function HomeScreen() {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [kural, setKural] = useState<KuralData | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [kuralLoading, setKuralLoading] = useState(true);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const card1Anim = useRef(new Animated.Value(0)).current;
+  const card2Anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, tension: 40, friction: 8, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 35, friction: 8, useNativeDriver: true }),
     ]).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 2000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-      ])
-    ).start();
+    Animated.sequence([Animated.delay(300),  Animated.timing(card1Anim, { toValue: 1, duration: 600, useNativeDriver: true })]).start();
+    Animated.sequence([Animated.delay(550),  Animated.timing(card2Anim, { toValue: 1, duration: 600, useNativeDriver: true })]).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 1.04, duration: 2500, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1,    duration: 2500, useNativeDriver: true }),
+    ])).start();
   }, []);
 
   const loadKural = useCallback(async () => {
     setKuralLoading(true);
     try {
       const data = await fetchKural();
-      if (data.success) {
-        const k = data.kural;
-        setKural({
-          number: data.number,
-          line1: k.line1 || k.couplet?.split('\n')[0] || '',
-          line2: k.line2 || k.couplet?.split('\n')[1] || '',
-          translation: k.transliteration || k.translation || '',
-          explanation: k.meaning?.en?.ainsi || k.explanation || '',
-          chapter: k.chapter?.name || '',
-        });
-      }
+      if (data.success) setKural({ number: data.number, line1: data.kural.line1 || '', line2: data.kural.line2 || '', porul: data.kural.porul || '', chapter: data.kural.chapter || '' });
     } catch {
-      setKural({
-        number: 1,
-        line1: 'அகர முதல எழுத்தெல்லாம் ஆதி',
-        line2: 'பகவன் முதற்றே உலகு.',
-        translation: 'All letters begin with A; the world begins with God.',
-        chapter: 'கடவுள் வாழ்த்து',
-      });
-    } finally {
-      setKuralLoading(false);
-    }
+      setKural({ number: 1, line1: 'அகர முதல எழுத்தெல்லாம் ஆதி', line2: 'பகவன் முதற்றே உலகு.', porul: 'எழுத்துக்கள் எல்லாம் அகரத்தை அடிப்படையாகக் கொண்டிருக்கின்றன; அதுபோல உலகம் கடவுளை அடிப்படையாகக் கொண்டிருக்கிறது.', chapter: 'கடவுள் வாழ்த்து' });
+    } finally { setKuralLoading(false); }
   }, []);
 
   const loadWeather = useCallback(async () => {
     setWeatherLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      let lat: number | undefined;
-      let lon: number | undefined;
+      let lat: number | undefined, lon: number | undefined;
       if (status === 'granted') {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
-        lat = loc.coords.latitude;
-        lon = loc.coords.longitude;
+        lat = loc.coords.latitude; lon = loc.coords.longitude;
       }
       const data = await fetchWeather(lat, lon);
       if (data.success) setWeather(data.data);
-    } catch {
-    } finally {
-      setWeatherLoading(false);
-    }
+      else console.warn('Weather error:', data.message, data.detail);
+    } catch (e: any) { console.warn('loadWeather failed:', e.message); }
+    finally { setWeatherLoading(false); }
   }, []);
 
-  useEffect(() => {
-    loadKural();
-    loadWeather();
-  }, [loadKural, loadWeather]);
+  useEffect(() => { loadKural(); loadWeather(); }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -130,15 +85,13 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [loadKural, loadWeather]);
 
-  const rotateStyle = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-
-  const getWeatherEmoji = (condition: string) => {
-    const c = condition?.toLowerCase() || '';
-    if (c.includes('sun') || c.includes('clear')) return '☀️';
-    if (c.includes('cloud')) return '⛅';
-    if (c.includes('rain')) return '🌧️';
-    if (c.includes('thunder')) return '⛈️';
-    if (c.includes('fog') || c.includes('mist')) return '🌫️';
+  const weatherEmoji = (c = '') => {
+    const t = c.toLowerCase();
+    if (t.includes('sun') || t.includes('clear'))  return '☀️';
+    if (t.includes('rain') || t.includes('drizzle')) return '🌧️';
+    if (t.includes('thunder'))                      return '⛈️';
+    if (t.includes('cloud'))                        return '⛅';
+    if (t.includes('fog') || t.includes('mist'))   return '🌫️';
     return '🌤️';
   };
 
@@ -147,272 +100,153 @@ export default function HomeScreen() {
   return (
     <View style={s.root}>
       <StatusBar style={theme.statusBar} />
-      <LinearGradient colors={theme.gradients.background as [string, string, string]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
+      <StarBackground />
 
-      <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />}
-      >
+      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />}>
+
         {/* Header */}
         <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <View>
-            <Text style={s.headerSub}>UPR நட்பு சாம்ராஜ்யம்</Text>
-            <Text style={s.headerTitle}>கணேசாபுரம்</Text>
-          </View>
-          <TouchableOpacity onPress={toggleTheme} style={s.themeBtn}>
-            <Text style={s.themeIcon}>{isDark ? '☀️' : '🌙'}</Text>
-          </TouchableOpacity>
+          <Text style={s.headerTitle}>கணேசபுரம்</Text>
         </Animated.View>
 
-        {/* Gold Divider */}
-        <Animated.View style={[s.divider, { opacity: fadeAnim }]}>
-          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.dividerLine} />
+        <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: SPACING.lg, marginBottom: SPACING.md }}>
+          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
         </Animated.View>
 
         {/* Thirukural Card */}
-        <Animated.View style={[s.cardWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <LinearGradient colors={theme.gradients.card as [string, string]} style={s.card}>
-            <LinearGradient colors={theme.gradients.gold as [string, string, string]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.cardBadge}>
-              <Text style={s.cardBadgeText}>திருக்குறள்</Text>
-              {kural && <Text style={s.kuralNumber}>#{kural.number}</Text>}
-            </LinearGradient>
-
-            {kuralLoading ? (
-              <ActivityIndicator color={GOLD.primary} size="large" style={{ marginVertical: 32 }} />
-            ) : kural ? (
-              <View style={s.kuralBody}>
-                <Animated.Text style={[s.kuralLine, { transform: [{ scale: pulseAnim }] }]}>
-                  {kural.line1}
-                </Animated.Text>
-                <Text style={s.kuralLine}>{kural.line2}</Text>
-                {kural.chapter ? (
-                  <View style={s.chapterTag}>
-                    <Text style={s.chapterText}>அதிகாரம்: {kural.chapter}</Text>
-                  </View>
-                ) : null}
-                {kural.translation ? (
-                  <View style={s.translationBox}>
-                    <Text style={s.translationLabel}>பொருள்</Text>
-                    <Text style={s.translationText}>{kural.translation}</Text>
-                  </View>
-                ) : null}
-                {kural.explanation ? (
-                  <Text style={s.explanation}>{kural.explanation}</Text>
-                ) : null}
-              </View>
-            ) : null}
-
-            <TouchableOpacity onPress={loadKural} style={s.refreshBtn}>
-              <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.refreshBtnInner}>
-                <Text style={s.refreshBtnText}>மற்றொரு குறள் →</Text>
+        <Animated.View style={[s.cardWrap, { opacity: card1Anim, transform: [{ translateY: card1Anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}>
+          <LinearGradient colors={theme.gradients.card as any} style={s.card}>
+            <View style={s.cardInnerBorder}>
+              <LinearGradient colors={theme.gradients.gold as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
+                <Text style={s.badgeText}>✦ திருக்குறள் ✦</Text>
+                {kural && <Text style={s.badgeNum}>#{kural.number}</Text>}
               </LinearGradient>
-            </TouchableOpacity>
+
+              {kuralLoading ? (
+                <ActivityIndicator color={GOLD.primary} size="large" style={{ marginVertical: 32 }} />
+              ) : kural ? (
+                <View style={s.kuralBody}>
+                  <Animated.Text style={[s.kuralLine, { transform: [{ scale: pulseAnim }] }]}>{kural.line1}</Animated.Text>
+                  <Text style={s.kuralLine}>{kural.line2}</Text>
+                  {kural.chapter ? (
+                    <View style={s.chapterTag}>
+                      <Text style={s.chapterText}>அதிகாரம்: {kural.chapter}</Text>
+                    </View>
+                  ) : null}
+                  {kural.porul ? (
+                    <View style={s.translationBox}>
+                      <Text style={s.translationLabel}>✦ பொருள்</Text>
+                      <Text style={s.translationText}>{kural.porul}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              <TouchableOpacity onPress={loadKural} style={s.nextBtn} activeOpacity={0.85}>
+                <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.nextBtnInner}>
+                  <Text style={s.nextBtnText}>அடுத்த குறள் ✦</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </LinearGradient>
         </Animated.View>
 
         {/* Weather Card */}
-        <Animated.View style={[s.cardWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <LinearGradient colors={theme.gradients.card as [string, string]} style={s.card}>
-            <LinearGradient colors={['#1e3a5f', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.cardBadge}>
-              <Text style={[s.cardBadgeText, { color: '#fff' }]}>வானிலை</Text>
-            </LinearGradient>
+        <Animated.View style={[s.cardWrap, { opacity: card2Anim, transform: [{ translateY: card2Anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}>
+          <LinearGradient colors={theme.gradients.card as any} style={s.card}>
+            <View style={s.cardInnerBorder}>
+              <LinearGradient colors={isDark ? ['#0a2a4a', '#0d3b6e'] : ['#1565C0', '#1976D2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
+                <Text style={[s.badgeText, { color: '#fff' }]}>✦ வானிலை ✦</Text>
+              </LinearGradient>
 
-            {weatherLoading ? (
-              <ActivityIndicator color={GOLD.primary} size="large" style={{ marginVertical: 32 }} />
-            ) : weather ? (
-              <View style={s.weatherBody}>
-                <View style={s.weatherTop}>
-                  <View>
-                    <Text style={s.weatherLocation}>
-                      📍 {weather.location.name}
-                    </Text>
-                    <Text style={s.weatherRegion}>{weather.location.region}</Text>
-                    <Text style={s.weatherTemp}>{Math.round(weather.current.temp_c)}°C</Text>
-                    <Text style={s.weatherCondition}>
-                      {getWeatherEmoji(weather.current.condition.text)} {weather.current.condition.text}
-                    </Text>
+              {weatherLoading ? (
+                <ActivityIndicator color={GOLD.primary} size="large" style={{ marginVertical: 32 }} />
+              ) : weather ? (
+                <View style={s.weatherBody}>
+                  <View style={s.weatherRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.weatherLoc}>📍 {weather.location.name}</Text>
+                      <Text style={s.weatherRegion}>{weather.location.region}</Text>
+                      <Text style={s.weatherTemp}>{Math.round(weather.current.temp_c)}°</Text>
+                      <Text style={s.weatherCond}>{weatherEmoji(weather.current.condition.text)} {weather.current.condition.text}</Text>
+                    </View>
+                    <View style={s.weatherStats}>
+                      <WeatherStat icon="🌡" label="உணர்வு"   value={`${Math.round(weather.current.feelslike_c)}°`}  theme={theme} />
+                      <WeatherStat icon="💧" label="ஈரப்பதம்" value={`${weather.current.humidity}%`}                 theme={theme} />
+                      <WeatherStat icon="💨" label="காற்று"    value={`${Math.round(weather.current.wind_kph)}km/h`}  theme={theme} />
+                    </View>
                   </View>
-                  <View style={s.weatherDetails}>
-                    <WeatherStat label="உணர்வு" value={`${Math.round(weather.current.feelslike_c)}°`} theme={theme} />
-                    <WeatherStat label="ஈரப்பதம்" value={`${weather.current.humidity}%`} theme={theme} />
-                    <WeatherStat label="காற்று" value={`${Math.round(weather.current.wind_kph)} kmph`} theme={theme} />
-                  </View>
+                  {weather.forecast?.forecastday[0] && (
+                    <View style={s.sunRow}>
+                      <Text style={s.sunText}>🌅 {weather.forecast.forecastday[0].astro.sunrise}</Text>
+                      <Text style={s.sunText}>🌇 {weather.forecast.forecastday[0].astro.sunset}</Text>
+                      <Text style={s.sunText}>↑{Math.round(weather.forecast.forecastday[0].day.maxtemp_c)}° ↓{Math.round(weather.forecast.forecastday[0].day.mintemp_c)}°</Text>
+                    </View>
+                  )}
                 </View>
-                {weather.forecast?.forecastday[0] && (
-                  <View style={s.sunRow}>
-                    <Text style={s.sunText}>🌅 {weather.forecast.forecastday[0].astro.sunrise}</Text>
-                    <Text style={s.sunText}>🌇 {weather.forecast.forecastday[0].astro.sunset}</Text>
-                    <Text style={s.sunText}>
-                      ↑{Math.round(weather.forecast.forecastday[0].day.maxtemp_c)}° ↓{Math.round(weather.forecast.forecastday[0].day.mintemp_c)}°
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ) : (
-              <Text style={s.weatherError}>வானிலை தகவல் கிடைக்கவில்லை</Text>
-            )}
+              ) : (
+                <View style={{ padding: SPACING.xl, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 32, marginBottom: 8 }}>🌤️</Text>
+                  <Text style={[s.weatherRegion, { textAlign: 'center' }]}>வானிலை தகவல் கிடைக்கவில்லை</Text>
+                  <TouchableOpacity onPress={loadWeather} style={{ marginTop: 12 }}>
+                    <Text style={{ color: GOLD.primary, fontWeight: '600' }}>மீண்டும் முயற்சி</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           </LinearGradient>
         </Animated.View>
 
-        {/* Footer */}
-        <Animated.View style={[s.footer, { opacity: fadeAnim }]}>
-          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.dividerLine} />
-          <Text style={s.footerText}>நன்றி. UPR நட்பு சாம்ராஜ்யம்</Text>
+        <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', paddingBottom: SPACING.xl }}>
+          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
+          <Text style={{ color: theme.textMuted, fontSize: 11, letterSpacing: 1 }}>நன்றி. Ganesapuram Mobile App Development Team ✦</Text>
         </Animated.View>
       </ScrollView>
     </View>
   );
 }
 
-function WeatherStat({ label, value, theme }: { label: string; value: string; theme: any }) {
+function WeatherStat({ icon, label, value, theme }: any) {
   return (
-    <View style={{ alignItems: 'center', marginBottom: 8 }}>
-      <Text style={{ color: theme.textMuted, fontSize: 10, fontWeight: '600' }}>{label}</Text>
-      <Text style={{ color: GOLD.light, fontSize: 14, fontWeight: '700' }}>{value}</Text>
+    <View style={{ alignItems: 'center', marginBottom: 10 }}>
+      <Text style={{ fontSize: 14 }}>{icon}</Text>
+      <Text style={{ color: theme.textMuted, fontSize: 9, fontWeight: '600', marginTop: 2 }}>{label}</Text>
+      <Text style={{ color: GOLD.light, fontSize: 13, fontWeight: '700' }}>{value}</Text>
     </View>
   );
 }
 
-const styles = (theme: any, isDark: boolean) =>
-  StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.background },
-    scroll: { flex: 1 },
-    content: { paddingBottom: SPACING.xxl },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: SPACING.lg,
-      paddingTop: 56,
-      paddingBottom: SPACING.md,
-    },
-    headerSub: {
-      color: GOLD.primary,
-      fontSize: 12,
-      fontWeight: FONTS.semibold,
-      letterSpacing: 2,
-      textTransform: 'uppercase',
-    },
-    headerTitle: {
-      color: theme.text,
-      fontSize: 28,
-      fontWeight: FONTS.black,
-      letterSpacing: -0.5,
-    },
-    themeBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: RADIUS.full,
-      backgroundColor: GOLD.subtle,
-      borderWidth: 1,
-      borderColor: GOLD.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    themeIcon: { fontSize: 20 },
-    divider: { paddingHorizontal: SPACING.lg, marginBottom: SPACING.md },
-    dividerLine: { height: 1, borderRadius: 1 },
-    cardWrap: { paddingHorizontal: SPACING.md, marginBottom: SPACING.md },
-    card: {
-      borderRadius: RADIUS.xl,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: GOLD.border,
-      ...SHADOWS.card,
-    },
-    cardBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: SPACING.md,
-      paddingVertical: SPACING.sm,
-    },
-    cardBadgeText: {
-      color: '#1A1020',
-      fontSize: 13,
-      fontWeight: FONTS.bold,
-      letterSpacing: 1,
-    },
-    kuralNumber: {
-      color: 'rgba(26,16,32,0.6)',
-      fontSize: 12,
-      fontWeight: FONTS.medium,
-    },
-    kuralBody: { padding: SPACING.md },
-    kuralLine: {
-      color: theme.text,
-      fontSize: 20,
-      fontWeight: FONTS.bold,
-      lineHeight: 32,
-      textAlign: 'center',
-      letterSpacing: 0.5,
-      marginBottom: 4,
-    },
-    chapterTag: {
-      alignSelf: 'center',
-      backgroundColor: GOLD.subtle,
-      borderRadius: RADIUS.full,
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      marginTop: SPACING.sm,
-      borderWidth: 1,
-      borderColor: GOLD.border,
-    },
-    chapterText: {
-      color: GOLD.primary,
-      fontSize: 11,
-      fontWeight: FONTS.semibold,
-    },
-    translationBox: {
-      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-      borderRadius: RADIUS.md,
-      padding: SPACING.md,
-      marginTop: SPACING.sm,
-      borderLeftWidth: 3,
-      borderLeftColor: GOLD.primary,
-    },
-    translationLabel: {
-      color: GOLD.primary,
-      fontSize: 11,
-      fontWeight: FONTS.bold,
-      marginBottom: 4,
-      letterSpacing: 1,
-    },
-    translationText: {
-      color: theme.textSecondary,
-      fontSize: 14,
-      lineHeight: 22,
-      fontStyle: 'italic',
-    },
-    explanation: {
-      color: theme.textMuted,
-      fontSize: 13,
-      lineHeight: 20,
-      marginTop: SPACING.sm,
-      textAlign: 'center',
-    },
-    refreshBtn: { margin: SPACING.md, marginTop: 0, borderRadius: RADIUS.full, overflow: 'hidden' },
-    refreshBtnInner: { paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.full },
-    refreshBtnText: { color: '#fff', fontWeight: FONTS.bold, fontSize: 14 },
-    weatherBody: { padding: SPACING.md },
-    weatherTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-    weatherLocation: { color: theme.text, fontSize: 15, fontWeight: FONTS.semibold },
-    weatherRegion: { color: theme.textMuted, fontSize: 12, marginBottom: SPACING.sm },
-    weatherTemp: { color: GOLD.light, fontSize: 52, fontWeight: FONTS.black, lineHeight: 60 },
-    weatherCondition: { color: theme.textSecondary, fontSize: 14, marginTop: 4 },
-    weatherDetails: { alignItems: 'flex-end' },
-    sunRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      marginTop: SPACING.md,
-      paddingTop: SPACING.md,
-      borderTopWidth: 1,
-      borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-    },
-    sunText: { color: theme.textSecondary, fontSize: 12, fontWeight: FONTS.medium },
-    weatherError: { color: theme.textMuted, textAlign: 'center', padding: SPACING.xl },
-    footer: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, alignItems: 'center', gap: SPACING.sm },
-    footerText: { color: theme.textMuted, fontSize: 12, letterSpacing: 0.5 },
-  });
+const styles = (theme: any, isDark: boolean) => StyleSheet.create({
+  root:            { flex: 1, backgroundColor: theme.background },
+  scroll:          { flex: 1 },
+  content:         { paddingBottom: SPACING.xxl },
+  header:          { paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: SPACING.md },
+  headerTitle:     { color: theme.text, fontSize: 30, fontWeight: '900', letterSpacing: -0.5 },
+  cardWrap:        { paddingHorizontal: SPACING.md, marginBottom: SPACING.md },
+  card:            { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 1, borderColor: GOLD.border, ...SHADOWS.gold },
+  cardInnerBorder: { margin: 1, borderRadius: RADIUS.xl - 1 },
+  badge:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 10 },
+  badgeText:       { color: '#1A0F00', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
+  badgeNum:        { color: 'rgba(26,15,0,0.55)', fontSize: 12, fontWeight: '600' },
+  kuralBody:       { padding: SPACING.md },
+  kuralLine:       { color: theme.text, fontSize: 19, fontWeight: '800', lineHeight: 32, textAlign: 'center', letterSpacing: 0.5, marginBottom: 4 },
+  chapterTag:      { alignSelf: 'center', backgroundColor: GOLD.subtle, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 4, marginTop: SPACING.sm, borderWidth: 1, borderColor: GOLD.border },
+  chapterText:     { color: GOLD.primary, fontSize: 11, fontWeight: '700' },
+  translationBox:  { backgroundColor: isDark ? 'rgba(201,162,39,0.08)' : 'rgba(201,162,39,0.06)', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.sm, borderLeftWidth: 3, borderLeftColor: GOLD.primary },
+  translationLabel:{ color: GOLD.primary, fontSize: 11, fontWeight: '800', marginBottom: 4, letterSpacing: 0.5 },
+  translationText: { color: theme.textSecondary, fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
+  nextBtn:         { margin: SPACING.md, marginTop: 4, borderRadius: RADIUS.full, overflow: 'hidden' },
+  nextBtnInner:    { paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.full },
+  nextBtnText:     { color: '#1A0F00', fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
+  weatherBody:     { padding: SPACING.md },
+  weatherRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  weatherLoc:      { color: theme.text, fontSize: 14, fontWeight: '700' },
+  weatherRegion:   { color: theme.textMuted, fontSize: 12, marginBottom: 4 },
+  weatherTemp:     { color: GOLD.light, fontSize: 56, fontWeight: '900', lineHeight: 64 },
+  weatherCond:     { color: theme.textSecondary, fontSize: 13, marginTop: 2 },
+  weatherStats:    { alignItems: 'center', paddingTop: 8 },
+  sunRow:          { flexDirection: 'row', justifyContent: 'space-around', marginTop: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: GOLD.border },
+  sunText:         { color: theme.textSecondary, fontSize: 11, fontWeight: '600' },
+});

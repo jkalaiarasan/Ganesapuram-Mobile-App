@@ -8,8 +8,10 @@ export interface MemberProfile {
   uprId: string;
   position: string;
   department: string;
-  username: string;
-  profileImageUrl: string | null;
+  dateOfBirth: string | null;
+  phone: string | null;
+  work: string | null;
+  location: string | null;
   contentVersionId: string | null;
 }
 
@@ -34,7 +36,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then(data => {
-      if (data) setMember(JSON.parse(data));
+      if (!data) return;
+      const parsed = JSON.parse(data);
+      // Require all current fields — any missing key means a stale session
+      const required = ['contentVersionId', 'work', 'location', 'dateOfBirth', 'phone'];
+      if (required.some(k => !(k in parsed))) {
+        AsyncStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+      setMember(parsed);
     });
   }, []);
 
@@ -44,8 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    setMember(null);                          // immediate UI update
     await AsyncStorage.removeItem(STORAGE_KEY);
-    setMember(null);
   };
 
   return (

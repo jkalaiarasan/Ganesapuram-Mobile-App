@@ -1,80 +1,115 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  Animated,
-  RefreshControl,
-  Dimensions,
-  Modal,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  ActivityIndicator, Animated, Image, TextInput, Dimensions,
+  RefreshControl, Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../context/ThemeContext';
-import { GOLD, SPACING, RADIUS, FONTS, SHADOWS } from '../theme';
+import { GOLD, SPACING, RADIUS, SHADOWS } from '../theme';
 import { fetchMemberList } from '../api';
+import StarBackground from '../components/StarBackground';
 
 const { width } = Dimensions.get('window');
-const CARD_W = (width - SPACING.lg * 2 - SPACING.sm) / 2;
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.39:3000';
 
 interface Member {
-  Id: string;
-  Name: string;
-  Username__c?: string;
-  UPRId__c?: string;
-  Position__c?: string;
-  Department__c?: string;
-  profileImageUrl?: string;
-  contentVersionId?: string;
+  id: string; name: string; email?: string; uprId?: string;
+  position?: string; department?: string; phone?: string | null; contentVersionId?: string;
 }
 
-function MemberCard({ item, onPress, index, theme }: { item: Member; onPress: () => void; index: number; theme: any }) {
-  const anim = useRef(new Animated.Value(0)).current;
+function MemberCard({ member, index }: { member: Member; index: number }) {
+  const { theme, isDark } = useTheme();
+  const anim     = useRef(new Animated.Value(0)).current;
+  const pressAnim = useRef(new Animated.Value(1)).current;
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
-    Animated.spring(anim, {
-      toValue: 1,
-      delay: index * 60,
-      tension: 40,
-      friction: 8,
+    Animated.timing(anim, {
+      toValue: 1, duration: 400,
+      delay: (index % 12) * 50,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [index]);
 
-  const initials = item.Name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  const onPressIn  = () => Animated.spring(pressAnim, { toValue: 0.97, useNativeDriver: true }).start();
+  const onPressOut = () => Animated.spring(pressAnim, { toValue: 1,    useNativeDriver: true }).start();
+
+  const imageUri = member.contentVersionId && !imgError
+    ? `${BASE_URL}/api/member/image/${member.contentVersionId}` : null;
+
+  const initials = member.name
+    ? member.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() : '?';
+
+  const handleCall = () => {
+    if (member.phone) Linking.openURL(`tel:${member.phone}`);
+  };
+
+  const s = cardStyles(theme, isDark);
 
   return (
-    <Animated.View style={{ opacity: anim, transform: [{ scale: anim }] }}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-        <LinearGradient colors={theme.gradients.card as [string, string]} style={[cardStyles.card, { width: CARD_W }]}>
-          <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} style={cardStyles.imageBorder}>
-            {item.contentVersionId ? (
-              <Image
-                source={{ uri: item.profileImageUrl }}
-                style={cardStyles.image}
-                defaultSource={require('../../assets/icon.png')}
-              />
+    <Animated.View style={{
+      opacity: anim,
+      transform: [
+        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) },
+        { scale: pressAnim },
+      ],
+      marginBottom: SPACING.sm,
+    }}>
+      <TouchableOpacity activeOpacity={0.9} onPressIn={onPressIn} onPressOut={onPressOut}>
+        <LinearGradient colors={theme.gradients.card as any} style={s.card}>
+          {/* Gold left accent bar */}
+          <LinearGradient
+            colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]}
+            start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+            style={s.leftBar}
+          />
+
+          {/* Avatar */}
+          <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.avatarRing}>
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={s.avatar} onError={() => setImgError(true)} />
             ) : (
-              <LinearGradient colors={['#2A2540', '#1A1625']} style={cardStyles.initialsBox}>
-                <Text style={cardStyles.initials}>{initials}</Text>
+              <LinearGradient
+                colors={[isDark ? '#1C1408' : '#FFF3D4', isDark ? '#2A1E08' : '#FFE8A0']}
+                style={s.avatarFallback}
+              >
+                <Text style={s.initials}>{initials}</Text>
               </LinearGradient>
             )}
           </LinearGradient>
-          <Text style={[cardStyles.name, { color: theme.text }]} numberOfLines={2}>{item.Name}</Text>
-          {item.Position__c ? (
-            <View style={cardStyles.badge}>
-              <Text style={cardStyles.badgeText} numberOfLines={1}>{item.Position__c}</Text>
+
+          {/* Info */}
+          <View style={s.info}>
+            <Text style={s.name} numberOfLines={1}>{member.name}</Text>
+
+            {member.position ? (
+              <View style={s.posTag}>
+                <Text style={s.posText} numberOfLines={1}>✦ {member.position}</Text>
+              </View>
+            ) : null}
+
+            <View style={s.metaRow}>
+              {member.department ? (
+                <Text style={s.meta} numberOfLines={1}>{member.department}</Text>
+              ) : null}
+              {member.department && member.uprId ? (
+                <Text style={[s.meta, { color: GOLD.border, marginHorizontal: 4 }]}>•</Text>
+              ) : null}
+              {member.uprId ? (
+                <Text style={[s.meta, { color: GOLD.dark }]}>#{member.uprId}</Text>
+              ) : null}
             </View>
-          ) : null}
-          {item.UPRId__c ? (
-            <Text style={[cardStyles.uprId, { color: theme.textMuted }]}>{item.UPRId__c}</Text>
-          ) : null}
-          {item.Department__c ? (
-            <Text style={[cardStyles.dept, { color: theme.textMuted }]} numberOfLines={1}>{item.Department__c}</Text>
+          </View>
+
+          {/* Call button */}
+          {member.phone ? (
+            <TouchableOpacity onPress={handleCall} activeOpacity={0.75} style={s.callBtn}>
+              <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.callBtnInner}>
+                <Text style={s.callIcon}>📞</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           ) : null}
         </LinearGradient>
       </TouchableOpacity>
@@ -82,194 +117,156 @@ function MemberCard({ item, onPress, index, theme }: { item: Member; onPress: ()
   );
 }
 
-const cardStyles = StyleSheet.create({
-  card: {
-    borderRadius: RADIUS.lg,
-    padding: SPACING.sm,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: GOLD.border,
-    marginBottom: SPACING.sm,
-    ...SHADOWS.card,
-  },
-  imageBorder: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    padding: 2,
-    marginBottom: 10,
-    marginTop: 6,
-  },
-  image: { width: 68, height: 68, borderRadius: 34 },
-  initialsBox: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initials: { color: GOLD.light, fontSize: 24, fontWeight: '800' },
-  name: { fontSize: 13, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
-  badge: {
-    backgroundColor: GOLD.subtle,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: GOLD.border,
-    marginBottom: 4,
-    maxWidth: CARD_W - 16,
-  },
-  badgeText: { color: GOLD.primary, fontSize: 10, fontWeight: '600', textAlign: 'center' },
-  uprId: { fontSize: 10, marginBottom: 2 },
-  dept: { fontSize: 10, textAlign: 'center' },
-});
-
 export default function MembersScreen() {
-  const { theme } = useTheme();
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { theme, isDark } = useTheme();
+  const [members,  setMembers]  = useState<Member[]>([]);
+  const [filtered, setFiltered] = useState<Member[]>([]);
+  const [loading,  setLoading]  = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selected, setSelected] = useState<Member | null>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [search,   setSearch]   = useState('');
+  const [error,    setError]    = useState('');
 
-  const loadMembers = useCallback(async () => {
-    try {
-      const data = await fetchMemberList();
-      if (data.success) setMembers(data.members);
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    loadMembers();
-    Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 35, friction: 8, useNativeDriver: true }),
+    ]).start();
   }, []);
+
+  const load = useCallback(async () => {
+    setError('');
+    try {
+      const data = await fetchMemberList();
+      if (data.success) { setMembers(data.members); setFiltered(data.members); }
+      else setError('உறுப்பினர்கள் பட்டியல் கிடைக்கவில்லை');
+    } catch (e: any) {
+      console.error('MembersScreen load error:', e.message);
+      setError('சேவையகத்துடன் இணைப்பு தோல்வி');
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadMembers();
+    await load();
     setRefreshing(false);
-  }, []);
+  }, [load]);
 
-  const s = styles(theme);
-  const initials = selected?.Name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+  useEffect(() => {
+    if (!search.trim()) { setFiltered(members); return; }
+    const q = search.toLowerCase();
+    setFiltered(members.filter(m =>
+      m.name?.toLowerCase().includes(q) ||
+      m.position?.toLowerCase().includes(q) ||
+      m.department?.toLowerCase().includes(q) ||
+      m.uprId?.toLowerCase().includes(q)
+    ));
+  }, [search, members]);
+
+  const s = styles(theme, isDark);
 
   return (
     <View style={s.root}>
       <StatusBar style={theme.statusBar} />
-      <LinearGradient colors={theme.gradients.background as [string, string, string]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
+      <StarBackground />
 
-      <Animated.View style={[s.header, { opacity: fadeAnim }]}>
-        <Text style={s.headerSub}>UPR நட்பு சாம்ராஜ்யம்</Text>
-        <Text style={s.headerTitle}>உறுப்பினர்கள்</Text>
-        <Text style={s.memberCount}>{members.length} உறுப்பினர்கள்</Text>
+      {/* Header */}
+      <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <LinearGradient colors={theme.gradients.header as any} style={s.headerBg}>
+          <View style={s.headerInner}>
+            <Text style={s.headerTitle}>உறுப்பினர்கள்</Text>
+            <Text style={s.headerCount}>{members.length} பேர்</Text>
+          </View>
+          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginBottom: SPACING.sm }} />
+          <View style={s.searchWrap}>
+            <Text style={{ color: GOLD.primary, marginRight: 8, fontSize: 16 }}>🔍</Text>
+            <TextInput
+              style={s.searchInput} placeholder="தேடுங்கள்..." placeholderTextColor={theme.textMuted}
+              value={search} onChangeText={setSearch} autoCapitalize="none" autoCorrect={false}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')}>
+                <Text style={{ color: GOLD.primary, fontSize: 16, paddingLeft: 8 }}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </LinearGradient>
       </Animated.View>
 
       {loading ? (
         <View style={s.center}>
           <ActivityIndicator color={GOLD.primary} size="large" />
-          <Text style={s.loadingText}>உறுப்பினர் விவரங்கள் ஏற்றுகிறது...</Text>
+          <Text style={[s.infoText, { marginTop: 12 }]}>ஏற்றுகிறது...</Text>
+        </View>
+      ) : error ? (
+        <View style={s.center}>
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>🌐</Text>
+          <Text style={s.infoText}>{error}</Text>
+          <TouchableOpacity onPress={() => { setLoading(true); load(); }} style={s.retryBtn}>
+            <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.retryBtnInner}>
+              <Text style={{ color: '#1A0F00', fontWeight: '800' }}>மீண்டும் முயற்சி</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
-          data={members}
-          numColumns={2}
-          keyExtractor={item => item.Id}
-          contentContainerStyle={s.list}
-          columnWrapperStyle={s.row}
+          data={filtered}
+          keyExtractor={item => item.id}
+          contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />}
-          renderItem={({ item, index }) => (
-            <MemberCard item={item} index={index} theme={theme} onPress={() => setSelected(item)} />
-          )}
+          ListEmptyComponent={
+            <View style={s.center}>
+              <Text style={{ fontSize: 48, marginBottom: 8 }}>👥</Text>
+              <Text style={s.infoText}>"{search}" - தேடல் முடிவு இல்லை</Text>
+            </View>
+          }
+          renderItem={({ item, index }) => <MemberCard member={item} index={index} />}
         />
       )}
-
-      {/* Member Detail Modal */}
-      <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
-        <View style={s.modalOverlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setSelected(null)} />
-          {selected && (
-            <LinearGradient colors={theme.gradients.card as [string, string]} style={s.modal}>
-              <LinearGradient colors={theme.gradients.gold as [string, string, string]} style={s.modalHeader}>
-                <LinearGradient colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']} style={s.modalImageBorder}>
-                  {selected.contentVersionId ? (
-                    <Image source={{ uri: selected.profileImageUrl }} style={s.modalImage} />
-                  ) : (
-                    <View style={[s.modalImage, { backgroundColor: '#1A1625', alignItems: 'center', justifyContent: 'center' }]}>
-                      <Text style={{ color: GOLD.light, fontSize: 40, fontWeight: '800' }}>{initials}</Text>
-                    </View>
-                  )}
-                </LinearGradient>
-              </LinearGradient>
-              <View style={s.modalBody}>
-                <Text style={s.modalName}>{selected.Name}</Text>
-                {selected.UPRId__c && <Text style={s.modalId}>{selected.UPRId__c}</Text>}
-                <View style={s.modalDivider} />
-                {selected.Position__c && (
-                  <DetailRow label="பதவி" value={selected.Position__c} theme={theme} />
-                )}
-                {selected.Department__c && (
-                  <DetailRow label="துறை" value={selected.Department__c} theme={theme} />
-                )}
-                {selected.Username__c && (
-                  <DetailRow label="பயனர் பெயர்" value={selected.Username__c} theme={theme} />
-                )}
-              </View>
-              <TouchableOpacity onPress={() => setSelected(null)} style={s.closeBtn}>
-                <Text style={s.closeBtnText}>மூடு</Text>
-              </TouchableOpacity>
-            </LinearGradient>
-          )}
-        </View>
-      </Modal>
     </View>
   );
 }
 
-function DetailRow({ label, value, theme }: { label: string; value: string; theme: any }) {
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-      <Text style={{ color: theme.textMuted, fontSize: 13 }}>{label}</Text>
-      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '600', maxWidth: '60%', textAlign: 'right' }}>{value}</Text>
-    </View>
-  );
-}
+const cardStyles = (theme: any, isDark: boolean) => StyleSheet.create({
+  card: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: RADIUS.xl, borderWidth: 1, borderColor: GOLD.border,
+    overflow: 'hidden', minHeight: 80, ...SHADOWS.card,
+  },
+  leftBar:      { width: 3, alignSelf: 'stretch' },
+  avatarRing:   { padding: 2.5, borderRadius: 36, marginHorizontal: SPACING.md, flexShrink: 0 },
+  avatar:       { width: 56, height: 56, borderRadius: 28 },
+  avatarFallback: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  initials:     { color: GOLD.primary, fontSize: 18, fontWeight: '900' },
+  info:         { flex: 1, paddingVertical: SPACING.md, paddingRight: SPACING.sm },
+  name:         { color: theme.text, fontSize: 15, fontWeight: '800', marginBottom: 4 },
+  posTag:       { alignSelf: 'flex-start', backgroundColor: GOLD.subtle, borderRadius: RADIUS.full, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 1, borderColor: GOLD.border, marginBottom: 4 },
+  posText:      { color: GOLD.primary, fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
+  metaRow:      { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  meta:         { color: theme.textMuted, fontSize: 11, fontWeight: '500' },
+  callBtn:      { marginRight: SPACING.md, flexShrink: 0 },
+  callBtnInner: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  callIcon:     { fontSize: 18 },
+});
 
-const styles = (theme: any) =>
-  StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.background },
-    header: {
-      paddingHorizontal: SPACING.lg,
-      paddingTop: 56,
-      paddingBottom: SPACING.md,
-    },
-    headerSub: { color: GOLD.primary, fontSize: 12, fontWeight: '600', letterSpacing: 2, textTransform: 'uppercase' },
-    headerTitle: { color: theme.text, fontSize: 28, fontWeight: '900', letterSpacing: -0.5 },
-    memberCount: { color: theme.textMuted, fontSize: 13, marginTop: 2 },
-    center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-    loadingText: { color: theme.textMuted, fontSize: 14 },
-    list: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.xxl },
-    row: { gap: SPACING.sm },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
-    modal: {
-      width: '100%',
-      borderRadius: RADIUS.xl,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: GOLD.border,
-      ...SHADOWS.gold,
-    },
-    modalHeader: { paddingVertical: SPACING.xl, alignItems: 'center' },
-    modalImageBorder: { width: 104, height: 104, borderRadius: 52, padding: 3 },
-    modalImage: { width: 98, height: 98, borderRadius: 49 },
-    modalBody: { padding: SPACING.lg },
-    modalName: { color: theme.text, fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 4 },
-    modalId: { color: GOLD.primary, fontSize: 14, textAlign: 'center', fontWeight: '600', marginBottom: SPACING.md },
-    modalDivider: { height: 1, backgroundColor: GOLD.border, marginBottom: SPACING.md },
-    closeBtn: { margin: SPACING.md, marginTop: 0, backgroundColor: GOLD.subtle, borderRadius: RADIUS.full, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: GOLD.border },
-    closeBtnText: { color: GOLD.primary, fontWeight: '700', fontSize: 14 },
-  });
+const styles = (theme: any, isDark: boolean) => StyleSheet.create({
+  root:        { flex: 1, backgroundColor: theme.background },
+  header:      { zIndex: 10 },
+  headerBg:    { paddingTop: 50, paddingHorizontal: SPACING.md, paddingBottom: 0 },
+  headerInner: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: SPACING.sm },
+  headerTitle: { color: theme.text, fontSize: 22, fontWeight: '900' },
+  headerCount: { color: theme.textMuted, fontSize: 12 },
+  searchWrap:  { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 10, marginBottom: SPACING.md, borderWidth: 1, borderColor: GOLD.border },
+  searchInput: { flex: 1, color: theme.text, fontSize: 14 },
+  listContent: { padding: SPACING.md, paddingBottom: 100 },
+  center:      { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
+  infoText:    { color: theme.textSecondary, fontSize: 14, textAlign: 'center' },
+  retryBtn:    { marginTop: SPACING.md, borderRadius: RADIUS.full, overflow: 'hidden' },
+  retryBtnInner: { paddingVertical: 12, paddingHorizontal: 28, borderRadius: RADIUS.full },
+});

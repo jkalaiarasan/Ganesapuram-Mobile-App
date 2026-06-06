@@ -10,8 +10,8 @@ export async function requestOtp(email: string) {
   return res.data;
 }
 
-export async function verifyOtp(email: string, otp: string) {
-  const res = await api.post('/api/member/verify-otp', { email, otp });
+export async function verifyOtp(email: string, otp: string, token: string) {
+  const res = await api.post('/api/member/verify-otp', { email, otp, token });
   return res.data;
 }
 
