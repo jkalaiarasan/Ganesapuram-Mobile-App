@@ -17,6 +17,7 @@ const { width } = Dimensions.get('window');
 interface KuralData {
   number: number; line1: string; line2: string;
   porul?: string; chapter?: string;
+  urai1?: string; urai2?: string;
 }
 interface WeatherData {
   location: { name: string; region: string };
@@ -32,6 +33,8 @@ export default function HomeScreen() {
   const [kuralLoading, setKuralLoading] = useState(true);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
+  const coordsRef = useRef<{ lat: number; lon: number } | null>(null);
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -55,21 +58,15 @@ export default function HomeScreen() {
     setKuralLoading(true);
     try {
       const data = await fetchKural();
-      if (data.success) setKural({ number: data.number, line1: data.kural.line1 || '', line2: data.kural.line2 || '', porul: data.kural.porul || '', chapter: data.kural.chapter || '' });
+      if (data.success) setKural({ number: data.number, line1: data.kural.line1 || '', line2: data.kural.line2 || '', urai1: data.kural.urai1 || '', urai2: data.kural.urai2 || '', chapter: data.kural.chapter || '' });
     } catch {
-      setKural({ number: 1, line1: 'அகர முதல எழுத்தெல்லாம் ஆதி', line2: 'பகவன் முதற்றே உலகு.', porul: 'எழுத்துக்கள் எல்லாம் அகரத்தை அடிப்படையாகக் கொண்டிருக்கின்றன; அதுபோல உலகம் கடவுளை அடிப்படையாகக் கொண்டிருக்கிறது.', chapter: 'கடவுள் வாழ்த்து' });
+      setKural({ number: 1, line1: 'அகர முதல எழுத்தெல்லாம் ஆதி', line2: 'பகவன் முதற்றே உலகு.', urai1: 'எழுத்துக்கள் எல்லாம் அகரத்தை அடிப்படையாகக் கொண்டிருக்கின்றன; அதுபோல உலகம் கடவுளை அடிப்படையாகக் கொண்டிருக்கிறது.', chapter: 'கடவுள் வாழ்த்து' });
     } finally { setKuralLoading(false); }
   }, []);
 
-  const loadWeather = useCallback(async () => {
+  const loadWeather = useCallback(async (lat?: number, lon?: number) => {
     setWeatherLoading(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      let lat: number | undefined, lon: number | undefined;
-      if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
-        lat = loc.coords.latitude; lon = loc.coords.longitude;
-      }
       const data = await fetchWeather(lat, lon);
       if (data.success) setWeather(data.data);
       else console.warn('Weather error:', data.message, data.detail);
@@ -77,11 +74,29 @@ export default function HomeScreen() {
     finally { setWeatherLoading(false); }
   }, []);
 
+  const handleLocationPress = useCallback(async () => {
+    if (usingCurrentLocation) {
+      coordsRef.current = null;
+      setUsingCurrentLocation(false);
+      loadWeather();
+      return;
+    }
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+      coordsRef.current = { lat: loc.coords.latitude, lon: loc.coords.longitude };
+      setUsingCurrentLocation(true);
+      loadWeather(loc.coords.latitude, loc.coords.longitude);
+    } catch (e: any) { console.warn('Location error:', e.message); }
+  }, [usingCurrentLocation, loadWeather]);
+
   useEffect(() => { loadKural(); loadWeather(); }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([loadKural(), loadWeather()]);
+    const c = coordsRef.current;
+    await Promise.all([loadKural(), loadWeather(c?.lat, c?.lon)]);
     setRefreshing(false);
   }, [loadKural, loadWeather]);
 
@@ -135,10 +150,10 @@ export default function HomeScreen() {
                       <Text style={s.chapterText}>அதிகாரம்: {kural.chapter}</Text>
                     </View>
                   ) : null}
-                  {kural.porul ? (
+                  {kural.urai1 ? (
                     <View style={s.translationBox}>
                       <Text style={s.translationLabel}>✦ பொருள்</Text>
-                      <Text style={s.translationText}>{kural.porul}</Text>
+                      <Text style={s.translationText}>{kural.urai1}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -159,6 +174,15 @@ export default function HomeScreen() {
             <View style={s.cardInnerBorder}>
               <LinearGradient colors={isDark ? ['#0a2a4a', '#0d3b6e'] : ['#1565C0', '#1976D2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
                 <Text style={[s.badgeText, { color: '#fff' }]}>✦ வானிலை ✦</Text>
+                <TouchableOpacity
+                  onPress={handleLocationPress}
+                  activeOpacity={0.75}
+                  style={[s.locBtn, usingCurrentLocation && s.locBtnActive]}
+                >
+                  <Text style={s.locBtnText}>
+                    {usingCurrentLocation ? '📍 என் இடம்' : '📍 இடம்'}
+                  </Text>
+                </TouchableOpacity>
               </LinearGradient>
 
               {weatherLoading ? (
@@ -190,7 +214,7 @@ export default function HomeScreen() {
                 <View style={{ padding: SPACING.xl, alignItems: 'center' }}>
                   <Text style={{ fontSize: 32, marginBottom: 8 }}>🌤️</Text>
                   <Text style={[s.weatherRegion, { textAlign: 'center' }]}>வானிலை தகவல் கிடைக்கவில்லை</Text>
-                  <TouchableOpacity onPress={loadWeather} style={{ marginTop: 12 }}>
+                  <TouchableOpacity onPress={() => loadWeather()} style={{ marginTop: 12 }}>
                     <Text style={{ color: GOLD.primary, fontWeight: '600' }}>மீண்டும் முயற்சி</Text>
                   </TouchableOpacity>
                 </View>
@@ -240,6 +264,9 @@ const styles = (theme: any, isDark: boolean) => StyleSheet.create({
   nextBtn:         { margin: SPACING.md, marginTop: 4, borderRadius: RADIUS.full, overflow: 'hidden' },
   nextBtnInner:    { paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.full },
   nextBtnText:     { color: '#1A0F00', fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
+  locBtn:          { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+  locBtnActive:    { backgroundColor: 'rgba(74,222,128,0.25)', borderColor: '#4ADE80' },
+  locBtnText:      { color: '#fff', fontSize: 11, fontWeight: '700' },
   weatherBody:     { padding: SPACING.md },
   weatherRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   weatherLoc:      { color: theme.text, fontSize: 14, fontWeight: '700' },

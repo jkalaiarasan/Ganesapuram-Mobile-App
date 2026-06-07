@@ -13,6 +13,7 @@ export interface MemberProfile {
   work: string | null;
   location: string | null;
   contentVersionId: string | null;
+  type?: string | null;
 }
 
 interface AuthContextType {

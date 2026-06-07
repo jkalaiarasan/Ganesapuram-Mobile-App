@@ -149,20 +149,31 @@ const np = StyleSheet.create({
   unreadDot: { position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: GOLD.primary },
 });
 
+// ── Tab label — single-line Tamil text, no wrapping ──────────────────────────
+function TabLabel({ label, color }: { label: string; color: string }) {
+  return (
+    <Text
+      numberOfLines={1}
+      allowFontScaling={false}
+      textBreakStrategy="simple"
+      style={{ fontSize: 11, fontWeight: '700', color, textAlign: 'center' }}
+    >
+      {label}
+    </Text>
+  );
+}
+
 // ── Tab icon ──────────────────────────────────────────────────────────────────
 const Tab = createBottomTabNavigator();
 
-function TabIcon({ emoji, label, focused, theme }: { emoji: string; label: string; focused: boolean; theme: any }) {
-  return (
-    <View style={ts.tabIcon}>
-      {focused ? (
-        <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.tabActive}>
-          <Text style={ts.tabEmoji}>{emoji}</Text>
-        </LinearGradient>
-      ) : (
-        <Text style={[ts.tabEmoji, { opacity: 0.5 }]}>{emoji}</Text>
-      )}
-      <Text style={[ts.tabLabel, focused ? ts.tabLabelActive : { color: theme.textMuted }]}>{label}</Text>
+function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
+  return focused ? (
+    <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.tabActive}>
+      <Text style={ts.tabEmoji}>{emoji}</Text>
+    </LinearGradient>
+  ) : (
+    <View style={ts.tabInactive}>
+      <Text style={[ts.tabEmoji, { opacity: 0.5 }]}>{emoji}</Text>
     </View>
   );
 }
@@ -184,29 +195,39 @@ export default function AppNavigator() {
               borderTopColor: GOLD.border,
               borderTopWidth: 1,
               height: 72,
-              paddingBottom: 8,
-              paddingTop: 4,
+              paddingBottom: 6,
+              paddingTop: 6,
             },
-            tabBarShowLabel: false,
+            tabBarActiveTintColor: GOLD.primary,
+            tabBarInactiveTintColor: theme.textMuted,
           }}
         >
           <Tab.Screen
             name="Home"
             component={HomeScreen}
-            options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" label="முகப்பு" focused={focused} theme={theme} /> }}
+            options={{
+              tabBarLabel: ({ color }) => <TabLabel label="முகப்பு" color={color} />,
+              tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+            }}
           />
           <Tab.Screen
             name="Members"
             component={MembersScreen}
-            options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="👥" label="உறுப்பினர்" focused={focused} theme={theme} /> }}
+            options={{
+              tabBarLabel: ({ color }) => <TabLabel label="உறுப்பினர்" color={color} />,
+              tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
+            }}
           />
           <Tab.Screen
             name="Profile"
             component={ProfileScreen}
             options={{
+              tabBarLabel: ({ color }) => (
+                <TabLabel label={isLoggedIn ? 'சுயவிவரம்' : 'உள்நுழைவு'} color={color} />
+              ),
               tabBarIcon: ({ focused }) => (
                 <View>
-                  <TabIcon emoji={isLoggedIn ? '✅' : '👤'} label={isLoggedIn ? 'சுயவிவரம்' : 'உள்நுழைவு'} focused={focused} theme={theme} />
+                  <TabIcon emoji={isLoggedIn ? '✅' : '👤'} focused={focused} />
                   {isLoggedIn && !focused && <View style={ts.dot} />}
                 </View>
               ),
@@ -217,7 +238,7 @@ export default function AppNavigator() {
 
       {/* ── Floating action buttons — hidden while notification panel is open ── */}
       <View style={ts.fab} pointerEvents={notifOpen ? 'none' : 'box-none'}>
-        <Animated.View style={{ opacity: notifOpen ? 0 : 1 }}>
+        <Animated.View style={{ opacity: notifOpen ? 0 : 1, gap: 12 }}>
         {/* Notification bell */}
         <TouchableOpacity onPress={() => setNotifOpen(true)} activeOpacity={0.8} style={ts.fabBtn}>
           <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.fabBtnInner}>
@@ -246,15 +267,13 @@ export default function AppNavigator() {
 }
 
 const ts = StyleSheet.create({
-  tabIcon:      { alignItems: 'center', justifyContent: 'center', gap: 2 },
-  tabActive:    { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  tabEmoji:     { fontSize: 22 },
-  tabLabel:     { fontSize: 10, fontWeight: '600' },
-  tabLabelActive: { color: GOLD.primary, fontWeight: '700' },
-  dot:          { position: 'absolute', top: 0, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
+  tabActive:   { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  tabInactive: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  tabEmoji:    { fontSize: 22 },
+  dot:         { position: 'absolute', top: 0, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
 
   // Floating buttons
-  fab:          { position: 'absolute', top: 52, right: 14, gap: 10, zIndex: 100, pointerEvents: 'box-none' },
+  fab:          { position: 'absolute', top: 52, right: 14, zIndex: 100, pointerEvents: 'box-none' },
   fabBtn:       { borderRadius: RADIUS.full, ...SHADOWS.gold },
   fabBtnInner:  { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   fabIcon:      { fontSize: 18 },

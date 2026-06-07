@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { GOLD, SPACING, RADIUS, SHADOWS } from '../theme';
 import { requestOtp, verifyOtp } from '../api';
 import StarBackground from '../components/StarBackground';
@@ -24,59 +25,6 @@ function formatDOB(raw: string | null): string {
     const months = ['ஜனவரி', 'பிப்ரவரி', 'மார்ச்', 'ஏப்ரல்', 'மே', 'ஜூன்', 'ஜூலை', 'ஆகஸ்ட்', 'செப்டம்பர்', 'அக்டோபர்', 'நவம்பர்', 'டிசம்பர்'];
     return `${d} ${months[parseInt(m, 10) - 1]} ${y}`;
   } catch { return raw; }
-}
-
-// ── Toast ─────────────────────────────────────────────────────────────────────
-type ToastType = 'error' | 'info' | 'success';
-
-function Toast({ message, type, onDone }: { message: string; type: ToastType; onDone: () => void }) {
-  const translateY = useRef(new Animated.Value(-120)).current;
-  const opacity    = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Slide in from above
-    Animated.parallel([
-      Animated.spring(translateY, { toValue: 0, tension: 55, friction: 11, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
-
-    // After 3 s slide back up and call onDone
-    const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(translateY, { toValue: -120, duration: 280, useNativeDriver: true }),
-        Animated.timing(opacity,    { toValue: 0,    duration: 200, useNativeDriver: true }),
-      ]).start(() => onDone());
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const borderColor = type === 'error' ? '#EF4444' : type === 'success' ? '#4ADE80' : GOLD.primary;
-  const bgColor     = type === 'error' ? 'rgba(40,8,8,0.97)' : type === 'success' ? 'rgba(8,30,12,0.97)' : 'rgba(20,14,3,0.97)';
-  const icon        = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
-
-  return (
-    <Animated.View style={{
-      position: 'absolute', top: 56, left: SPACING.md, right: SPACING.md,
-      zIndex: 9999,
-      transform: [{ translateY }], opacity,
-    }}>
-      <View style={{
-        flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
-        backgroundColor: bgColor,
-        borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor,
-        borderLeftWidth: 4, borderLeftColor: borderColor,
-        padding: SPACING.md,
-        shadowColor: borderColor, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
-        elevation: 10,
-      }}>
-        <Text style={{ fontSize: 18 }}>{icon}</Text>
-        <Text style={{ flex: 1, color: '#F5ECD7', fontSize: 13, fontWeight: '600', lineHeight: 20 }}>
-          {message}
-        </Text>
-      </View>
-    </Animated.View>
-  );
 }
 
 // ── OTP digit boxes ───────────────────────────────────────────────────────────
@@ -233,6 +181,7 @@ const IS = StyleSheet.create({
 export default function ProfileScreen() {
   const { theme, isDark } = useTheme();
   const { member, login, logout } = useAuth();
+  const { showToast } = useToast();
 
   const [loginStep, setLoginStep] = useState<LoginStep>('email');
   const [email, setEmail] = useState('');
@@ -241,11 +190,6 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-
-  const showToast = (message: string, type: ToastType = 'error') => {
-    setToast({ message, type });
-  };
 
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const slideAnim  = useRef(new Animated.Value(40)).current;
@@ -277,45 +221,43 @@ export default function ProfileScreen() {
   }, [member]);
 
   const handleRequestOtp = async () => {
-    if (!email.trim()) return showToast('மின்னஞ்சல் முகவரி உள்ளிடவும்');
+    if (!email.trim()) return showToast('மின்னஞ்சல் முகவரி உள்ளிடவும்', 'error');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-      return showToast('சரியான மின்னஞ்சல் முகவரி உள்ளிடவும்');
-    setToast(null);
+      return showToast('சரியான மின்னஞ்சல் முகவரி உள்ளிடவும்', 'error');
     setLoading(true);
     try {
       const res = await requestOtp(email.trim().toLowerCase());
       if (res.success) { setOtpToken(res.token || ''); setLoginStep('otp'); }
-      else showToast(res.message || 'OTP அனுப்ப முடியவில்லை');
+      else showToast(res.message || 'OTP அனுப்ப முடியவில்லை', 'error');
     } catch (err: any) {
       const status  = err?.response?.status;
       const message = err?.response?.data?.message;
       if (status === 404)
-        showToast('இந்த மின்னஞ்சல் பதிவு செய்யப்படவில்லை.\nதயவுசெய்து சரியான மின்னஞ்சலை உள்ளிடவும்.');
+        showToast('இந்த மின்னஞ்சல் பதிவு செய்யப்படவில்லை.\nதயவுசெய்து சரியான மின்னஞ்சலை உள்ளிடவும்.', 'error');
       else if (message)
-        showToast(message);
+        showToast(message, 'error');
       else
-        showToast('சேவையகத்துடன் இணைப்பு தோல்வி. மீண்டும் முயற்சிக்கவும்.');
+        showToast('சேவையகத்துடன் இணைப்பு தோல்வி. மீண்டும் முயற்சிக்கவும்.', 'error');
     }
     finally { setLoading(false); }
   };
 
   const handleVerifyOtp = async () => {
-    if (otp.length !== 6) return showToast('6 இலக்க OTP குறியீட்டை உள்ளிடவும்');
-    setToast(null);
+    if (otp.length !== 6) return showToast('6 இலக்க OTP குறியீட்டை உள்ளிடவும்', 'error');
     setLoading(true);
     try {
       const res = await verifyOtp(email.trim().toLowerCase(), otp, otpToken);
       if (res.success && res.member) await login(res.member);
-      else showToast(res.message || 'OTP சரிபார்ப்பு தோல்வி');
+      else showToast(res.message || 'OTP சரிபார்ப்பு தோல்வி', 'error');
     } catch (err: any) {
       const status  = err?.response?.status;
       const message = err?.response?.data?.message;
       if (status === 401)
-        showToast('OTP சரியில்லை அல்லது காலாவதியாகிவிட்டது.');
+        showToast('OTP சரியில்லை அல்லது காலாவதியாகிவிட்டது.', 'error');
       else if (message)
-        showToast(message);
+        showToast(message, 'error');
       else
-        showToast('சேவையகத்துடன் இணைப்பு தோல்வி. மீண்டும் முயற்சிக்கவும்.');
+        showToast('சேவையகத்துடன் இணைப்பு தோல்வி. மீண்டும் முயற்சிக்கவும்.', 'error');
     }
     finally { setLoading(false); }
   };
@@ -450,9 +392,6 @@ export default function ProfileScreen() {
       <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
       <StarBackground />
 
-      {/* Floating toast — renders above everything */}
-      {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
-
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={s.loginScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
@@ -537,7 +476,7 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
 
                   {/* Resend / back */}
-                  <TouchableOpacity onPress={() => { setLoginStep('email'); setOtp(''); setOtpToken(''); setToast(null); }} style={{ alignItems: 'center', marginTop: SPACING.md }}>
+                  <TouchableOpacity onPress={() => { setLoginStep('email'); setOtp(''); setOtpToken(''); }} style={{ alignItems: 'center', marginTop: SPACING.md }}>
                     <Text style={{ color: GOLD.primary, fontSize: 13, fontWeight: '600', letterSpacing: 0.3 }}>← மின்னஞ்சல் மாற்று</Text>
                   </TouchableOpacity>
 

@@ -7,6 +7,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { GOLD, SPACING, RADIUS, SHADOWS } from '../theme';
 import { fetchMemberList } from '../api';
 import StarBackground from '../components/StarBackground';
@@ -19,7 +20,7 @@ interface Member {
   position?: string; department?: string; phone?: string | null; contentVersionId?: string;
 }
 
-function MemberCard({ member, index }: { member: Member; index: number }) {
+function MemberCard({ member, index, showDeptPos }: { member: Member; index: number; showDeptPos: boolean }) {
   const { theme, isDark } = useTheme();
   const anim     = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(1)).current;
@@ -84,17 +85,17 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
           <View style={s.info}>
             <Text style={s.name} numberOfLines={1}>{member.name}</Text>
 
-            {member.position ? (
+            {showDeptPos && member.position ? (
               <View style={s.posTag}>
                 <Text style={s.posText} numberOfLines={1}>✦ {member.position}</Text>
               </View>
             ) : null}
 
             <View style={s.metaRow}>
-              {member.department ? (
+              {showDeptPos && member.department ? (
                 <Text style={s.meta} numberOfLines={1}>{member.department}</Text>
               ) : null}
-              {member.department && member.uprId ? (
+              {showDeptPos && member.department && member.uprId ? (
                 <Text style={[s.meta, { color: GOLD.border, marginHorizontal: 4 }]}>•</Text>
               ) : null}
               {member.uprId ? (
@@ -119,6 +120,9 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
 
 export default function MembersScreen() {
   const { theme, isDark } = useTheme();
+  const { member: authMember, isLoggedIn } = useAuth();
+  const isUPR = isLoggedIn && authMember?.type === 'UPR';
+
   const [members,  setMembers]  = useState<Member[]>([]);
   const [filtered, setFiltered] = useState<Member[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -157,15 +161,18 @@ export default function MembersScreen() {
   }, [load]);
 
   useEffect(() => {
-    if (!search.trim()) { setFiltered(members); return; }
-    const q = search.toLowerCase();
-    setFiltered(members.filter(m =>
-      m.name?.toLowerCase().includes(q) ||
-      m.position?.toLowerCase().includes(q) ||
-      m.department?.toLowerCase().includes(q) ||
-      m.uprId?.toLowerCase().includes(q)
-    ));
-  }, [search, members]);
+    let list = isUPR ? members : [...members].sort((a, b) => a.name.localeCompare(b.name));
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(m =>
+        m.name?.toLowerCase().includes(q) ||
+        m.position?.toLowerCase().includes(q) ||
+        m.department?.toLowerCase().includes(q) ||
+        m.uprId?.toLowerCase().includes(q)
+      );
+    }
+    setFiltered(list);
+  }, [search, members, isUPR]);
 
   const s = styles(theme, isDark);
 
@@ -226,7 +233,7 @@ export default function MembersScreen() {
               <Text style={s.infoText}>"{search}" - தேடல் முடிவு இல்லை</Text>
             </View>
           }
-          renderItem={({ item, index }) => <MemberCard member={item} index={index} />}
+          renderItem={({ item, index }) => <MemberCard member={item} index={index} showDeptPos={isUPR} />}
         />
       )}
     </View>
