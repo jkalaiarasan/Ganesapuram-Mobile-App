@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.100:3000';
+const BASE_URL = 'https://ganesapuram-mobile-app-server.vercel.app/';
 
 const api = axios.create({ baseURL: BASE_URL, timeout: 15000 });
 

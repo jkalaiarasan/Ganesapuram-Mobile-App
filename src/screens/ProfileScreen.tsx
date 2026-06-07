@@ -14,7 +14,7 @@ import { requestOtp, verifyOtp } from '../api';
 import StarBackground from '../components/StarBackground';
 
 const { width } = Dimensions.get('window');
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.39:3000';
+const BASE_URL = 'https://ganesapuram-mobile-app-server.vercel.app/';
 
 type LoginStep = 'email' | 'otp';
 
