@@ -37,3 +37,9 @@ export async function fetchKural() {
   const res = await api.get('/api/kural');
   return res.data;
 }
+
+// Push notifications
+export async function registerPushToken(memberId: string, expoPushToken: string) {
+  const res = await api.post('/api/member/push-token', { memberId, expoPushToken });
+  return res.data;
+}

@@ -22,7 +22,10 @@
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
       ]
     },
     "plugins": [
@@ -30,6 +33,14 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "வானிலை தகவல் கிடைக்க உங்கள் இருப்பிடம் தேவை."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#C9A227",
+          "sounds": []
         }
       ]
     ],
