@@ -43,3 +43,24 @@ export async function registerPushToken(memberId: string, expoPushToken: string)
   const res = await api.post('/api/member/push-token', { memberId, expoPushToken });
   return res.data;
 }
+
+// Refresh member profile (already logged in)
+export async function refreshMemberProfile(memberId: string, email: string) {
+  const res = await api.get('/api/member/profile', { params: { memberId, email } });
+  return res.data;
+}
+
+// Session check — single device enforcement
+export async function checkSession(memberId: string, sessionToken: string) {
+  const res = await api.get('/api/member/session-check', { params: { memberId, sessionToken } });
+  return res.data as { valid: boolean };
+}
+
+// Error logging — fire-and-forget, silently ignores failures
+export async function logError(name: string, description: string, memberId?: string | null) {
+  try {
+    await api.post('/api/member/error-log', { name, description, memberId: memberId ?? null });
+  } catch {
+    // logging must never break the app
+  }
+}

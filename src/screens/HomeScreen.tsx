@@ -8,8 +8,9 @@ import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useRefreshContext } from '../context/RefreshContext';
 import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
-import { fetchKural, fetchWeather } from '../api';
+import { fetchKural, fetchWeather, logError } from '../api';
 import StarBackground from '../components/StarBackground';
 
 const { width } = Dimensions.get('window');
@@ -27,6 +28,7 @@ interface WeatherData {
 
 export default function HomeScreen() {
   const { theme, isDark } = useTheme();
+  const { register, unregister } = useRefreshContext();
   const insets = useSafeAreaInsets();
   const [kural, setKural] = useState<KuralData | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -59,7 +61,8 @@ export default function HomeScreen() {
     try {
       const data = await fetchKural();
       if (data.success) setKural({ number: data.number, line1: data.kural.line1 || '', line2: data.kural.line2 || '', urai1: data.kural.urai1 || '', urai2: data.kural.urai2 || '', chapter: data.kural.chapter || '' });
-    } catch {
+    } catch (e: any) {
+      logError('Kural Load Failed', e?.message || 'Failed to load Thirukural');
       setKural({ number: 1, line1: 'அகர முதல எழுத்தெல்லாம் ஆதி', line2: 'பகவன் முதற்றே உலகு.', urai1: 'எழுத்துக்கள் எல்லாம் அகரத்தை அடிப்படையாகக் கொண்டிருக்கின்றன; அதுபோல உலகம் கடவுளை அடிப்படையாகக் கொண்டிருக்கிறது.', chapter: 'கடவுள் வாழ்த்து' });
     } finally { setKuralLoading(false); }
   }, []);
@@ -70,7 +73,10 @@ export default function HomeScreen() {
       const data = await fetchWeather(lat, lon);
       if (data.success) setWeather(data.data);
       else console.warn('Weather error:', data.message, data.detail);
-    } catch (e: any) { console.warn('loadWeather failed:', e.message); }
+    } catch (e: any) {
+      console.warn('loadWeather failed:', e.message);
+      logError('Weather Load Failed', e?.message || 'Failed to load weather data');
+    }
     finally { setWeatherLoading(false); }
   }, []);
 
@@ -100,6 +106,11 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [loadKural, loadWeather]);
 
+  useEffect(() => {
+    register('Home', onRefresh);
+    return () => unregister('Home');
+  }, [onRefresh, register, unregister]);
+
   const weatherEmoji = (c = '') => {
     const t = c.toLowerCase();
     if (t.includes('sun') || t.includes('clear'))  return '☀️';
@@ -122,7 +133,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />}>
 
         {/* Header */}
-        <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }], paddingTop: insets.top + 8 }]}>
+        <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }], paddingTop: Math.max(insets.top, 28) + 8 }]}>
           <Text style={s.headerTitle}>கணேசபுரம்</Text>
         </Animated.View>
 

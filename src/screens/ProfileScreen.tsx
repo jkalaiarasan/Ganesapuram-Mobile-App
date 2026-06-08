@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ActivityIndicator, Animated, KeyboardAvoidingView, Platform,
-  ScrollView, Image, Linking, Dimensions,
+  ScrollView, Image, Linking, Dimensions, RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -10,8 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useRefreshContext } from '../context/RefreshContext';
 import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
-import { requestOtp, verifyOtp } from '../api';
+import { requestOtp, verifyOtp, logError } from '../api';
 import StarBackground from '../components/StarBackground';
 
 const { width } = Dimensions.get('window');
@@ -181,9 +182,22 @@ const IS = StyleSheet.create({
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { theme, isDark } = useTheme();
-  const { member, login, logout } = useAuth();
+  const { member, login, logout, refreshMember } = useAuth();
+  const { register, unregister } = useRefreshContext();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshMember();
+    setRefreshing(false);
+  }, [refreshMember]);
+
+  useEffect(() => {
+    register('Profile', onRefresh);
+    return () => unregister('Profile');
+  }, [onRefresh, register, unregister]);
 
   const [loginStep, setLoginStep] = useState<LoginStep>('email');
   const [email, setEmail] = useState('');
@@ -234,6 +248,7 @@ export default function ProfileScreen() {
     } catch (err: any) {
       const status  = err?.response?.status;
       const message = err?.response?.data?.message;
+      logError('OTP Request Failed', `Status:${status ?? 'N/A'} | ${message ?? err?.message ?? 'Unknown'}`);
       if (status === 404)
         showToast('இந்த மின்னஞ்சல் பதிவு செய்யப்படவில்லை.\nதயவுசெய்து சரியான மின்னஞ்சலை உள்ளிடவும்.', 'error');
       else if (message)
@@ -249,11 +264,20 @@ export default function ProfileScreen() {
     setLoading(true);
     try {
       const res = await verifyOtp(email.trim().toLowerCase(), otp, otpToken);
-      if (res.success && res.member) await login(res.member);
-      else showToast(res.message || 'OTP சரிபார்ப்பு தோல்வி', 'error');
+      if (res.success && res.member) {
+        await login(res.member, res.sessionToken);
+        const firstName = res.member.name?.split(' ')[0] || res.member.name;
+        const welcome = res.member.type === 'UPR'
+          ? `Welcome to UPR, ${firstName}!`
+          : `Hi ${firstName}, welcome to Ganesapuram App`;
+        showToast(welcome, 'success');
+      } else {
+        showToast(res.message || 'OTP சரிபார்ப்பு தோல்வி', 'error');
+      }
     } catch (err: any) {
       const status  = err?.response?.status;
       const message = err?.response?.data?.message;
+      logError('OTP Verify Failed', `Status:${status ?? 'N/A'} | ${message ?? err?.message ?? 'Unknown'}`);
       if (status === 401)
         showToast('OTP சரியில்லை அல்லது காலாவதியாகிவிட்டது.', 'error');
       else if (message)
@@ -296,7 +320,13 @@ export default function ProfileScreen() {
         <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
         <StarBackground />
 
-        <ScrollView contentContainerStyle={s.profileScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={s.profileScroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />
+          }
+        >
 
           {/* ── Hero ── */}
           <LinearGradient
@@ -305,7 +335,7 @@ export default function ProfileScreen() {
           >
             <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 2, width: '100%' }} />
 
-            <View style={[s.heroContent, { paddingTop: insets.top + SPACING.md }]}>
+            <View style={[s.heroContent, { paddingTop: Math.max(insets.top, 28) + SPACING.md }]}>
               {/* Avatar */}
               <Animated.View style={{ transform: [{ scale: scaleAnim }], marginBottom: SPACING.md }}>
                 <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.avatarGlow}>
@@ -382,7 +412,7 @@ export default function ProfileScreen() {
       <StarBackground />
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={s.loginScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[s.loginScroll, { paddingTop: Math.max(insets.top, 28) + SPACING.md }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
           {loginStep === 'email' ? (
             /* ── EMAIL STEP ── */

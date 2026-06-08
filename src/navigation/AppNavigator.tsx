@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback,
-  Animated, ScrollView, Dimensions,
+  Animated, ScrollView, Dimensions, Platform,
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -12,6 +12,7 @@ import MembersScreen from '../screens/MembersScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useRefreshContext } from '../context/RefreshContext';
 import {
   useNotifications,
   formatRelativeTime,
@@ -259,8 +260,19 @@ export default function AppNavigator() {
   const { theme, isDark, toggleTheme } = useTheme();
   const { isLoggedIn } = useAuth();
   const { unreadCount, pendingOpenPanel, clearPendingOpen } = useNotifications();
+  const { refresh } = useRefreshContext();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('Home');
+  const reloadAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+
+  const handleReload = () => {
+    reloadAnim.setValue(0);
+    Animated.timing(reloadAnim, { toValue: 1, duration: 700, useNativeDriver: true }).start(() => {
+      reloadAnim.setValue(0);
+    });
+    refresh(activeTab);
+  };
 
   // Auto-open panel when user taps a notification from the OS tray
   useEffect(() => {
@@ -274,14 +286,17 @@ export default function AppNavigator() {
     <View style={{ flex: 1 }}>
       <NavigationContainer>
         <Tab.Navigator
+          screenListeners={({ route }) => ({
+            focus: () => setActiveTab(route.name),
+          })}
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
               backgroundColor: theme.tabBar,
               borderTopColor: GOLD.border,
               borderTopWidth: 1,
-              height: 72 + insets.bottom,
-              paddingBottom: insets.bottom + 6,
+              height: 72 + Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0),
+              paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + 6,
               paddingTop: 6,
             },
             tabBarActiveTintColor: GOLD.primary,
@@ -323,7 +338,7 @@ export default function AppNavigator() {
       </NavigationContainer>
 
       {/* ── Floating buttons ── */}
-      <View style={[ts.fab, { top: insets.top + 8 }]} pointerEvents={notifOpen ? 'none' : 'box-none'}>
+      <View style={[ts.fab, { top: Math.max(insets.top, 28) + 4 }]} pointerEvents={notifOpen ? 'none' : 'box-none'}>
         <Animated.View style={{ opacity: notifOpen ? 0 : 1, gap: 12 }}>
           {/* Notification bell */}
           <TouchableOpacity onPress={() => setNotifOpen(true)} activeOpacity={0.8} style={ts.fabBtn}>
@@ -335,6 +350,15 @@ export default function AppNavigator() {
                 <Text style={ts.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
               </View>
             )}
+          </TouchableOpacity>
+
+          {/* Reload current page */}
+          <TouchableOpacity onPress={handleReload} activeOpacity={0.8} style={ts.fabBtn}>
+            <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.fabBtnInner}>
+              <Animated.Text style={[ts.fabIcon, { transform: [{ rotate: reloadAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>
+                🔄
+              </Animated.Text>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Dark / light toggle */}
@@ -356,7 +380,7 @@ const ts = StyleSheet.create({
   tabInactive:    { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   tabEmoji:       { fontSize: 22 },
   dot:            { position: 'absolute', top: 0, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
-  fab:            { position: 'absolute', top: 52, right: 14, zIndex: 100, pointerEvents: 'box-none' },
+  fab:            { position: 'absolute', top: 52, right: 14, zIndex: 100, elevation: 20 },
   fabBtn:         { borderRadius: RADIUS.full, ...SHADOWS.gold },
   fabBtnInner:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   fabIcon:        { fontSize: 18 },

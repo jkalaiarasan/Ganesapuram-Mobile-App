@@ -27,6 +27,7 @@ import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { ToastProvider } from './src/context/ToastContext';
 import { NotificationProvider } from './src/context/NotificationContext';
+import { RefreshProvider } from './src/context/RefreshContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 export default function App() {
@@ -48,13 +49,15 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <NotificationProvider>
-            <AuthProvider>
-              <ToastProvider>
-                <AppNavigator />
-              </ToastProvider>
-            </AuthProvider>
-          </NotificationProvider>
+          <ToastProvider>
+            <NotificationProvider>
+              <AuthProvider>
+                <RefreshProvider>
+                  <AppNavigator />
+                </RefreshProvider>
+              </AuthProvider>
+            </NotificationProvider>
+          </ToastProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

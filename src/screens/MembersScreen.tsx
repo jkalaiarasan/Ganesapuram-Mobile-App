@@ -9,8 +9,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useRefreshContext } from '../context/RefreshContext';
 import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
-import { fetchMemberList } from '../api';
+import { fetchMemberList, logError } from '../api';
 import StarBackground from '../components/StarBackground';
 
 const { width } = Dimensions.get('window');
@@ -122,6 +123,7 @@ function MemberCard({ member, index, showDeptPos }: { member: Member; index: num
 export default function MembersScreen() {
   const { theme, isDark } = useTheme();
   const { member: authMember, isLoggedIn } = useAuth();
+  const { register, unregister } = useRefreshContext();
   const insets = useSafeAreaInsets();
   const isUPR = isLoggedIn && authMember?.type === 'UPR';
 
@@ -150,6 +152,7 @@ export default function MembersScreen() {
       else setError('உறுப்பினர்கள் பட்டியல் கிடைக்கவில்லை');
     } catch (e: any) {
       console.error('MembersScreen load error:', e.message);
+      logError('Members List Failed', e?.message || 'Failed to load member list', authMember?.id);
       setError('சேவையகத்துடன் இணைப்பு தோல்வி');
     } finally { setLoading(false); }
   }, []);
@@ -161,6 +164,11 @@ export default function MembersScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  useEffect(() => {
+    register('Members', onRefresh);
+    return () => unregister('Members');
+  }, [onRefresh, register, unregister]);
 
   useEffect(() => {
     let list = isUPR ? members : [...members].sort((a, b) => a.name.localeCompare(b.name));
@@ -186,7 +194,7 @@ export default function MembersScreen() {
 
       {/* Header */}
       <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <LinearGradient colors={theme.gradients.header as any} style={[s.headerBg, { paddingTop: insets.top + 8 }]}>
+        <LinearGradient colors={theme.gradients.header as any} style={[s.headerBg, { paddingTop: Math.max(insets.top, 28) + 8 }]}>
           <View style={s.headerInner}>
             <Text style={s.headerTitle}>உறுப்பினர்கள்</Text>
             <Text style={s.headerCount}>{members.length} பேர்</Text>
