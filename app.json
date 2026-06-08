@@ -42,7 +42,8 @@
           "color": "#C9A227",
           "sounds": []
         }
-      ]
+      ],
+      "expo-font"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

@@ -6,9 +6,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { GOLD, SPACING, RADIUS, SHADOWS } from '../theme';
+import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
 import { fetchMemberList } from '../api';
 import StarBackground from '../components/StarBackground';
 
@@ -73,7 +74,7 @@ function MemberCard({ member, index, showDeptPos }: { member: Member; index: num
               <Image source={{ uri: imageUri }} style={s.avatar} onError={() => setImgError(true)} />
             ) : (
               <LinearGradient
-                colors={[isDark ? '#1C1408' : '#FFF3D4', isDark ? '#2A1E08' : '#FFE8A0']}
+                colors={isDark ? ['#1A1A1A', '#222222'] : ['#F8F8F8', '#F0F0F0']}
                 style={s.avatarFallback}
               >
                 <Text style={s.initials}>{initials}</Text>
@@ -121,6 +122,7 @@ function MemberCard({ member, index, showDeptPos }: { member: Member; index: num
 export default function MembersScreen() {
   const { theme, isDark } = useTheme();
   const { member: authMember, isLoggedIn } = useAuth();
+  const insets = useSafeAreaInsets();
   const isUPR = isLoggedIn && authMember?.type === 'UPR';
 
   const [members,  setMembers]  = useState<Member[]>([]);
@@ -184,7 +186,7 @@ export default function MembersScreen() {
 
       {/* Header */}
       <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <LinearGradient colors={theme.gradients.header as any} style={s.headerBg}>
+        <LinearGradient colors={theme.gradients.header as any} style={[s.headerBg, { paddingTop: insets.top + 8 }]}>
           <View style={s.headerInner}>
             <Text style={s.headerTitle}>உறுப்பினர்கள்</Text>
             <Text style={s.headerCount}>{members.length} பேர்</Text>
@@ -216,7 +218,7 @@ export default function MembersScreen() {
           <Text style={s.infoText}>{error}</Text>
           <TouchableOpacity onPress={() => { setLoading(true); load(); }} style={s.retryBtn}>
             <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.retryBtnInner}>
-              <Text style={{ color: '#1A0F00', fontWeight: '800' }}>மீண்டும் முயற்சி</Text>
+              <Text style={{ color: '#1A0F00', fontFamily: FONT_FAMILY.extrabold }}>மீண்டும் முயற்சி</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -250,13 +252,13 @@ const cardStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   avatarRing:   { padding: 2.5, borderRadius: 36, marginHorizontal: SPACING.md, flexShrink: 0 },
   avatar:       { width: 56, height: 56, borderRadius: 28 },
   avatarFallback: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  initials:     { color: GOLD.primary, fontSize: 18, fontWeight: '900' },
+  initials:     { color: GOLD.primary, fontSize: 18, fontFamily: FONT_FAMILY.black },
   info:         { flex: 1, paddingVertical: SPACING.md, paddingRight: SPACING.sm },
-  name:         { color: theme.text, fontSize: 15, fontWeight: '800', marginBottom: 4 },
+  name:         { color: theme.text, fontSize: 15, fontFamily: FONT_FAMILY.extrabold, marginBottom: 4 },
   posTag:       { alignSelf: 'flex-start', backgroundColor: GOLD.subtle, borderRadius: RADIUS.full, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 1, borderColor: GOLD.border, marginBottom: 4 },
-  posText:      { color: GOLD.primary, fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
+  posText:      { color: GOLD.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.3 },
   metaRow:      { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  meta:         { color: theme.textMuted, fontSize: 11, fontWeight: '500' },
+  meta:         { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium },
   callBtn:      { marginRight: SPACING.md, flexShrink: 0 },
   callBtnInner: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   callIcon:     { fontSize: 18 },
@@ -267,13 +269,13 @@ const styles = (theme: any, isDark: boolean) => StyleSheet.create({
   header:      { zIndex: 10 },
   headerBg:    { paddingTop: 50, paddingHorizontal: SPACING.md, paddingBottom: 0 },
   headerInner: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: SPACING.sm },
-  headerTitle: { color: theme.text, fontSize: 22, fontWeight: '900' },
-  headerCount: { color: theme.textMuted, fontSize: 12 },
+  headerTitle: { color: theme.text, fontSize: 22, fontFamily: FONT_FAMILY.black },
+  headerCount: { color: theme.textMuted, fontSize: 12, fontFamily: FONT_FAMILY.medium },
   searchWrap:  { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 10, marginBottom: SPACING.md, borderWidth: 1, borderColor: GOLD.border },
-  searchInput: { flex: 1, color: theme.text, fontSize: 14 },
+  searchInput: { flex: 1, color: theme.text, fontSize: 14, fontFamily: FONT_FAMILY.regular },
   listContent: { padding: SPACING.md, paddingBottom: 100 },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
-  infoText:    { color: theme.textSecondary, fontSize: 14, textAlign: 'center' },
+  infoText:    { color: theme.textSecondary, fontSize: 14, fontFamily: FONT_FAMILY.regular, textAlign: 'center' },
   retryBtn:    { marginTop: SPACING.md, borderRadius: RADIUS.full, overflow: 'hidden' },
   retryBtnInner: { paddingVertical: 12, paddingHorizontal: 28, borderRadius: RADIUS.full },
 });

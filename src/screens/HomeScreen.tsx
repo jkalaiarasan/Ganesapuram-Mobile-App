@@ -6,14 +6,14 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { GOLD, SPACING, RADIUS, FONTS, SHADOWS } from '../theme';
+import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
 import { fetchKural, fetchWeather } from '../api';
 import StarBackground from '../components/StarBackground';
 
 const { width } = Dimensions.get('window');
 
-// ── Interfaces ────────────────────────────────────────────────────────────────
 interface KuralData {
   number: number; line1: string; line2: string;
   porul?: string; chapter?: string;
@@ -25,9 +25,9 @@ interface WeatherData {
   forecast?: { forecastday: Array<{ astro: { sunrise: string; sunset: string }; day: { maxtemp_c: number; mintemp_c: number } }> };
 }
 
-// ── Main screen ───────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const [kural, setKural] = useState<KuralData | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [kuralLoading, setKuralLoading] = useState(true);
@@ -122,7 +122,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />}>
 
         {/* Header */}
-        <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }], paddingTop: insets.top + 8 }]}>
           <Text style={s.headerTitle}>கணேசபுரம்</Text>
         </Animated.View>
 
@@ -215,7 +215,7 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 32, marginBottom: 8 }}>🌤️</Text>
                   <Text style={[s.weatherRegion, { textAlign: 'center' }]}>வானிலை தகவல் கிடைக்கவில்லை</Text>
                   <TouchableOpacity onPress={() => loadWeather()} style={{ marginTop: 12 }}>
-                    <Text style={{ color: GOLD.primary, fontWeight: '600' }}>மீண்டும் முயற்சி</Text>
+                    <Text style={{ color: GOLD.primary, fontFamily: FONT_FAMILY.semibold }}>மீண்டும் முயற்சி</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -225,7 +225,7 @@ export default function HomeScreen() {
 
         <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', paddingBottom: SPACING.xl }}>
           <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
-          <Text style={{ color: theme.textMuted, fontSize: 11, letterSpacing: 1 }}>நன்றி. Ganesapuram Mobile App Development Team ✦</Text>
+          <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, letterSpacing: 1 }}>நன்றி. Ganesapuram Mobile App Development Team ✦</Text>
         </Animated.View>
       </ScrollView>
     </View>
@@ -236,8 +236,8 @@ function WeatherStat({ icon, label, value, theme }: any) {
   return (
     <View style={{ alignItems: 'center', marginBottom: 10 }}>
       <Text style={{ fontSize: 14 }}>{icon}</Text>
-      <Text style={{ color: theme.textMuted, fontSize: 9, fontWeight: '600', marginTop: 2 }}>{label}</Text>
-      <Text style={{ color: GOLD.light, fontSize: 13, fontWeight: '700' }}>{value}</Text>
+      <Text style={{ color: theme.textMuted, fontSize: 9, fontFamily: FONT_FAMILY.semibold, marginTop: 2 }}>{label}</Text>
+      <Text style={{ color: GOLD.light, fontSize: 13, fontFamily: FONT_FAMILY.bold }}>{value}</Text>
     </View>
   );
 }
@@ -247,33 +247,33 @@ const styles = (theme: any, isDark: boolean) => StyleSheet.create({
   scroll:          { flex: 1 },
   content:         { paddingBottom: SPACING.xxl },
   header:          { paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: SPACING.md },
-  headerTitle:     { color: theme.text, fontSize: 30, fontWeight: '900', letterSpacing: -0.5 },
+  headerTitle:     { color: theme.text, fontSize: 30, fontFamily: FONT_FAMILY.black, letterSpacing: -0.5 },
   cardWrap:        { paddingHorizontal: SPACING.md, marginBottom: SPACING.md },
   card:            { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 1, borderColor: GOLD.border, ...SHADOWS.gold },
   cardInnerBorder: { margin: 1, borderRadius: RADIUS.xl - 1 },
   badge:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 10 },
-  badgeText:       { color: '#1A0F00', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
-  badgeNum:        { color: 'rgba(26,15,0,0.55)', fontSize: 12, fontWeight: '600' },
+  badgeText:       { color: '#1A0F00', fontSize: 13, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 1 },
+  badgeNum:        { color: 'rgba(26,15,0,0.55)', fontSize: 12, fontFamily: FONT_FAMILY.semibold },
   kuralBody:       { padding: SPACING.md },
-  kuralLine:       { color: theme.text, fontSize: 19, fontWeight: '800', lineHeight: 32, textAlign: 'center', letterSpacing: 0.5, marginBottom: 4 },
+  kuralLine:       { color: theme.text, fontSize: 19, fontFamily: FONT_FAMILY.extrabold, lineHeight: 32, textAlign: 'center', letterSpacing: 0.5, marginBottom: 4 },
   chapterTag:      { alignSelf: 'center', backgroundColor: GOLD.subtle, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 4, marginTop: SPACING.sm, borderWidth: 1, borderColor: GOLD.border },
-  chapterText:     { color: GOLD.primary, fontSize: 11, fontWeight: '700' },
+  chapterText:     { color: GOLD.primary, fontSize: 11, fontFamily: FONT_FAMILY.bold },
   translationBox:  { backgroundColor: isDark ? 'rgba(201,162,39,0.08)' : 'rgba(201,162,39,0.06)', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.sm, borderLeftWidth: 3, borderLeftColor: GOLD.primary },
-  translationLabel:{ color: GOLD.primary, fontSize: 11, fontWeight: '800', marginBottom: 4, letterSpacing: 0.5 },
-  translationText: { color: theme.textSecondary, fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
+  translationLabel:{ color: GOLD.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, marginBottom: 4, letterSpacing: 0.5 },
+  translationText: { color: theme.textSecondary, fontSize: 14, fontFamily: FONT_FAMILY.regular, lineHeight: 22, fontStyle: 'italic' },
   nextBtn:         { margin: SPACING.md, marginTop: 4, borderRadius: RADIUS.full, overflow: 'hidden' },
   nextBtnInner:    { paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.full },
-  nextBtnText:     { color: '#1A0F00', fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
+  nextBtnText:     { color: '#1A0F00', fontFamily: FONT_FAMILY.extrabold, fontSize: 14, letterSpacing: 0.5 },
   locBtn:          { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   locBtnActive:    { backgroundColor: 'rgba(74,222,128,0.25)', borderColor: '#4ADE80' },
-  locBtnText:      { color: '#fff', fontSize: 11, fontWeight: '700' },
+  locBtnText:      { color: '#fff', fontSize: 11, fontFamily: FONT_FAMILY.bold },
   weatherBody:     { padding: SPACING.md },
   weatherRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  weatherLoc:      { color: theme.text, fontSize: 14, fontWeight: '700' },
-  weatherRegion:   { color: theme.textMuted, fontSize: 12, marginBottom: 4 },
-  weatherTemp:     { color: GOLD.light, fontSize: 56, fontWeight: '900', lineHeight: 64 },
-  weatherCond:     { color: theme.textSecondary, fontSize: 13, marginTop: 2 },
+  weatherLoc:      { color: theme.text, fontSize: 14, fontFamily: FONT_FAMILY.bold },
+  weatherRegion:   { color: theme.textMuted, fontSize: 12, fontFamily: FONT_FAMILY.regular, marginBottom: 4 },
+  weatherTemp:     { color: GOLD.light, fontSize: 56, fontFamily: FONT_FAMILY.black, lineHeight: 64 },
+  weatherCond:     { color: theme.textSecondary, fontSize: 13, fontFamily: FONT_FAMILY.regular, marginTop: 2 },
   weatherStats:    { alignItems: 'center', paddingTop: 8 },
   sunRow:          { flexDirection: 'row', justifyContent: 'space-around', marginTop: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: GOLD.border },
-  sunText:         { color: theme.textSecondary, fontSize: 11, fontWeight: '600' },
+  sunText:         { color: theme.textSecondary, fontSize: 11, fontFamily: FONT_FAMILY.semibold },
 });

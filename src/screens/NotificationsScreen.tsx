@@ -1,152 +1,129 @@
 import React, { useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, Dimensions,
+  View, Text, StyleSheet, ScrollView, Animated,
+  Dimensions, TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { GOLD, SPACING, RADIUS, SHADOWS } from '../theme';
+import {
+  useNotifications,
+  StoredNotification,
+  formatRelativeTime,
+  extractIcon,
+} from '../context/NotificationContext';
+import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
 import StarBackground from '../components/StarBackground';
 
-const { width } = Dimensions.get('window');
+// ── Group notifications by day ────────────────────────────────────────────────
+function groupByDay(notifications: StoredNotification[]) {
+  const today     = new Date(); today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  const weekAgo   = new Date(today); weekAgo.setDate(today.getDate() - 7);
 
-interface Notification {
-  id: string;
-  icon: string;
-  title: string;
-  body: string;
-  time: string;
-  unread: boolean;
-  type: 'announcement' | 'member' | 'event' | 'info';
+  const groups: { label: string; items: StoredNotification[] }[] = [
+    { label: 'இன்று',       items: [] },
+    { label: 'நேற்று',      items: [] },
+    { label: 'இந்த வாரம்', items: [] },
+    { label: 'பழைய',        items: [] },
+  ];
+
+  for (const n of notifications) {
+    const d = new Date(n.receivedAt); d.setHours(0, 0, 0, 0);
+    if (d >= today)          groups[0].items.push(n);
+    else if (d >= yesterday) groups[1].items.push(n);
+    else if (d >= weekAgo)   groups[2].items.push(n);
+    else                     groups[3].items.push(n);
+  }
+
+  return groups.filter(g => g.items.length > 0);
 }
 
-const STATIC_NOTIFICATIONS: { section: string; items: Notification[] }[] = [
-  {
-    section: 'இன்று',
-    items: [
-      {
-        id: '1',
-        icon: '📢',
-        title: 'குழு கூட்டம் அறிவிப்பு',
-        body: 'இந்த ஞாயிற்றுக்கிழமை மாலை 5 மணிக்கு மாதாந்திர கூட்டம் நடைபெறும். அனைவரும் கலந்துகொள்ள அழைக்கிறோம்.',
-        time: '2 மணி நேரம் முன்பு',
-        unread: true,
-        type: 'announcement',
-      },
-      {
-        id: '2',
-        icon: '🎉',
-        title: 'புதிய உறுப்பினர் வரவேற்பு',
-        body: 'திரு. ரவிக்குமார் நம் குழுவில் புதிதாக இணைந்துள்ளார். அனைவரும் வரவேற்கிறோம்!',
-        time: '5 மணி நேரம் முன்பு',
-        unread: true,
-        type: 'member',
-      },
-    ],
-  },
-  {
-    section: 'நேற்று',
-    items: [
-      {
-        id: '3',
-        icon: '🏆',
-        title: 'நிகழ்ச்சி நினைவூட்டல்',
-        body: 'வரும் திங்கட்கிழமை கலாச்சார நிகழ்ச்சி. பதிவு செய்துகொள்ள இறுதி நாள் இன்றோடு முடிவடைகிறது.',
-        time: 'நேற்று மாலை 6:30',
-        unread: true,
-        type: 'event',
-      },
-      {
-        id: '4',
-        icon: '📸',
-        title: 'புகைப்பட தொகுப்பு',
-        body: 'கடந்த மாதம் நடைபெற்ற பொங்கல் விழாவின் புகைப்படங்கள் பதிவேற்றப்பட்டுள்ளன.',
-        time: 'நேற்று மதியம் 2:15',
-        unread: false,
-        type: 'info',
-      },
-    ],
-  },
-  {
-    section: 'கடந்த வாரம்',
-    items: [
-      {
-        id: '5',
-        icon: '💰',
-        title: 'சேமிப்பு திட்டம்',
-        body: 'இம்மாத சேமிப்பு தொகை செலுத்தும் கடைசி நாள் மாதம் 15. தவறவிட வேண்டாம்.',
-        time: '3 நாள் முன்பு',
-        unread: false,
-        type: 'announcement',
-      },
-      {
-        id: '6',
-        icon: '🌟',
-        title: 'UPR நட்பு சாம்ராஜ்யம்',
-        body: 'UPR குழுவில் நீங்கள் பதிவு செய்யப்பட்டுள்ளீர்கள். நன்றி! உங்கள் உறுப்பினர் அட்டை விரைவில் வழங்கப்படும்.',
-        time: '5 நாள் முன்பு',
-        unread: false,
-        type: 'info',
-      },
-    ],
-  },
-];
+// ── Single notification card ──────────────────────────────────────────────────
+function NotifCard({
+  item, index, theme, isDark, onTap,
+}: {
+  item: StoredNotification; index: number; theme: any; isDark: boolean; onTap: () => void;
+}) {
+  const anim  = useRef(new Animated.Value(0)).current;
+  const press = useRef(new Animated.Value(1)).current;
 
-const UNREAD_COUNT = STATIC_NOTIFICATIONS
-  .flatMap(s => s.items)
-  .filter(n => n.unread).length;
-
-const TYPE_COLORS: Record<string, string> = {
-  announcement: '#C9A227',
-  member:       '#4ADE80',
-  event:        '#60A5FA',
-  info:         '#A78BFA',
-};
-
-function NotifCard({ item, index }: { item: Notification; index: number }) {
-  const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1, duration: 420,
-      delay: index * 80, useNativeDriver: true,
-    }).start();
+    Animated.timing(anim, { toValue: 1, duration: 420, delay: index * 70, useNativeDriver: true }).start();
   }, []);
 
-  const accentColor = TYPE_COLORS[item.type] || GOLD.primary;
+  const { icon, cleanTitle } = extractIcon(item.title);
+  const isUnread = !item.viewed;
+
+  const onPressIn  = () => Animated.spring(press, { toValue: 0.98, useNativeDriver: true }).start();
+  const onPressOut = () => Animated.spring(press, { toValue: 1,    useNativeDriver: true }).start();
 
   return (
     <Animated.View style={{
       opacity: anim,
-      transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+      transform: [
+        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-18, 0] }) },
+        { scale: press },
+      ],
       marginBottom: SPACING.sm,
     }}>
-      <LinearGradient
-        colors={['rgba(28,20,8,0.92)', 'rgba(17,12,3,0.88)']}
-        style={[styles.card, { borderLeftColor: accentColor }]}
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={onTap}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
       >
-        {/* Unread dot */}
-        {item.unread && <View style={[styles.unreadDot, { backgroundColor: accentColor }]} />}
+        <LinearGradient
+          colors={theme.gradients.card}
+          style={[
+            s.card,
+            { borderLeftColor: isUnread ? GOLD.primary : (isDark ? '#2A2A2A' : '#D4B87A'),
+              opacity: item.viewed ? 0.7 : 1,
+              ...SHADOWS.card },
+          ]}
+        >
+          {isUnread && <View style={[s.unreadDot, { backgroundColor: GOLD.primary }]} />}
 
-        <View style={[styles.iconWrap, { backgroundColor: `${accentColor}22` }]}>
-          <Text style={{ fontSize: 22 }}>{item.icon}</Text>
-        </View>
-
-        <View style={{ flex: 1 }}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.title, item.unread && { color: '#F5ECD7' }]} numberOfLines={1}>
-              {item.title}
-            </Text>
-            <Text style={styles.time}>{item.time}</Text>
+          <View style={[s.iconWrap, { backgroundColor: isUnread ? 'rgba(201,162,39,0.18)' : 'rgba(201,162,39,0.08)' }]}>
+            <Text style={{ fontSize: 22 }}>{icon}</Text>
           </View>
-          <Text style={styles.body} numberOfLines={2}>{item.body}</Text>
-        </View>
-      </LinearGradient>
+
+          <View style={{ flex: 1 }}>
+            <View style={s.titleRow}>
+              <Text
+                style={[s.title, { color: isUnread ? theme.text : theme.textSecondary }]}
+                numberOfLines={1}
+              >
+                {cleanTitle}
+              </Text>
+              <Text style={[s.time, { color: theme.textMuted }]}>{formatRelativeTime(item.receivedAt)}</Text>
+            </View>
+            <Text style={[s.body, { color: theme.textMuted }]} numberOfLines={2}>{item.body}</Text>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
 
+// ── Section header ────────────────────────────────────────────────────────────
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <View style={s.sectionRow}>
+      <LinearGradient colors={[GOLD.dark, GOLD.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.sectionLine} />
+      <Text style={s.sectionLabel}>{label}</Text>
+      <LinearGradient colors={[GOLD.primary, GOLD.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.sectionLine} />
+    </View>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 export default function NotificationsScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { notifications, unreadCount, markViewed, markAllViewed, clearAll } = useNotifications();
+
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -157,75 +134,90 @@ export default function NotificationsScreen() {
     ]).start();
   }, []);
 
+  const groups = groupByDay(notifications);
+  const isEmpty = notifications.length === 0;
+
   return (
     <View style={[s.root, { backgroundColor: theme.background }]}>
       <StatusBar style={theme.statusBar} />
       <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
       <StarBackground />
 
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
         {/* Header */}
-        <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }], paddingTop: insets.top + 8 }]}>
           <View>
             <Text style={[s.headerTitle, { color: theme.text }]}>அறிவிப்புகள்</Text>
             <Text style={s.headerSub}>NOTIFICATIONS</Text>
           </View>
-          {UNREAD_COUNT > 0 && (
-            <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.badge}>
-              <Text style={s.badgeText}>{UNREAD_COUNT} புதியவை</Text>
-            </LinearGradient>
-          )}
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            {unreadCount > 0 && (
+              <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.badge}>
+                <Text style={s.badgeText}>{unreadCount} புதியவை</Text>
+              </LinearGradient>
+            )}
+          </View>
         </Animated.View>
 
-        <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: SPACING.lg, marginBottom: SPACING.md }}>
-          <LinearGradient
-            colors={['transparent', GOLD.primary, 'transparent']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={{ height: 1 }}
-          />
+        {/* Divider */}
+        <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: SPACING.lg, marginBottom: SPACING.sm }}>
+          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
         </Animated.View>
 
-        {/* Sections */}
-        {STATIC_NOTIFICATIONS.map((section, si) => (
-          <Animated.View
-            key={section.section}
-            style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], paddingHorizontal: SPACING.md }}
-          >
-            {/* Section label */}
-            <View style={s.sectionRow}>
-              <LinearGradient
-                colors={[GOLD.dark, GOLD.primary]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={s.sectionLine}
-              />
-              <Text style={s.sectionLabel}>{section.section}</Text>
-              <LinearGradient
-                colors={[GOLD.primary, GOLD.dark]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={s.sectionLine}
-              />
-            </View>
+        {/* Action buttons */}
+        {!isEmpty && (
+          <Animated.View style={[s.actionRow, { opacity: fadeAnim }]}>
+            {unreadCount > 0 && (
+              <TouchableOpacity onPress={markAllViewed} activeOpacity={0.7} style={[s.actionBtn, { borderColor: GOLD.border }]}>
+                <Text style={[s.actionBtnText, { color: GOLD.primary }]}>✓ அனைத்தும் படிக்கப்பட்டது</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={clearAll} activeOpacity={0.7} style={[s.actionBtn, { borderColor: isDark ? 'rgba(239,68,68,0.35)' : 'rgba(220,38,38,0.3)' }]}>
+              <Text style={[s.actionBtnText, { color: isDark ? '#FF6B6B' : '#DC2626' }]}>🗑 அனைத்தையும் நீக்கு</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
-            {section.items.map((item, i) => (
-              <NotifCard key={item.id} item={item} index={si * 4 + i} />
+        {/* Empty state */}
+        {isEmpty && (
+          <Animated.View style={[s.empty, { opacity: fadeAnim }]}>
+            <Text style={{ fontSize: 52, marginBottom: 14 }}>🔔</Text>
+            <Text style={[s.emptyTitle, { color: theme.textSecondary }]}>அறிவிப்புகள் இல்லை</Text>
+            <Text style={[s.emptyBody, { color: theme.textMuted }]}>
+              Salesforce-ல் Notification__c record உருவாக்கும்போது push notification வரும், அது இங்கு சேமிக்கப்படும்.
+            </Text>
+            <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.emptyDivider} />
+            <Text style={[s.emptyHint, { color: theme.textMuted }]}>NotificationTrigger → ExpoPushNotificationController → Expo Push API → Mobile</Text>
+          </Animated.View>
+        )}
+
+        {/* Grouped notifications */}
+        {groups.map((group, gi) => (
+          <Animated.View key={group.label} style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], paddingHorizontal: SPACING.md }}>
+            <SectionLabel label={group.label} />
+            {group.items.map((item, i) => (
+              <NotifCard
+                key={item.id}
+                item={item}
+                index={gi * 10 + i}
+                theme={theme}
+                isDark={isDark}
+                onTap={() => markViewed(item.id)}
+              />
             ))}
           </Animated.View>
         ))}
 
         {/* Footer */}
-        <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', paddingBottom: SPACING.xxl, paddingTop: SPACING.lg }}>
-          <LinearGradient
-            colors={['transparent', GOLD.primary, 'transparent']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={{ height: 1, width: '60%', marginBottom: SPACING.md }}
-          />
-          <Text style={{ color: theme.textMuted, fontSize: 11, letterSpacing: 1 }}>
-            ✦  UPR நட்பு சாம்ராஜ்யம்  ✦
-          </Text>
-        </Animated.View>
+        {!isEmpty && (
+          <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', paddingBottom: SPACING.xxl, paddingTop: SPACING.lg }}>
+            <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
+            <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, letterSpacing: 1 }}>
+              ✦  UPR நட்பு சாம்ராஜ்யம்  ✦
+            </Text>
+          </Animated.View>
+        )}
       </ScrollView>
     </View>
   );
@@ -235,26 +227,32 @@ const s = StyleSheet.create({
   root:         { flex: 1 },
   scroll:       { paddingBottom: SPACING.xxl },
   header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: SPACING.md },
-  headerTitle:  { fontSize: 30, fontWeight: '900', letterSpacing: -0.5 },
-  headerSub:    { color: GOLD.primary, fontSize: 10, fontWeight: '700', letterSpacing: 2.5, marginTop: 2 },
+  headerTitle:  { fontSize: 30, fontFamily: FONT_FAMILY.black, letterSpacing: -0.5 },
+  headerSub:    { color: GOLD.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 2.5, marginTop: 2 },
   badge:        { borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 6 },
-  badgeText:    { color: '#1A0F00', fontSize: 12, fontWeight: '800' },
+  badgeText:    { color: '#1A0F00', fontSize: 12, fontFamily: FONT_FAMILY.extrabold },
+  actionRow:    { flexDirection: 'row', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm, flexWrap: 'wrap' },
+  actionBtn:    { borderRadius: RADIUS.full, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1 },
+  actionBtnText:{ fontSize: 12, fontFamily: FONT_FAMILY.semibold },
   sectionRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm, marginTop: SPACING.sm, gap: SPACING.sm },
   sectionLine:  { flex: 1, height: 1 },
-  sectionLabel: { color: GOLD.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.5 },
+  sectionLabel: { color: GOLD.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 1.5 },
   card:         {
     flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
     borderRadius: RADIUS.lg, borderWidth: 1, borderColor: GOLD.border,
     borderLeftWidth: 3, padding: SPACING.md,
-    ...SHADOWS.gold,
   },
   unreadDot:    { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4 },
   iconWrap:     { width: 44, height: 44, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   titleRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  title:        { color: '#C4A882', fontSize: 14, fontWeight: '700', flex: 1, marginRight: 8 },
-  time:         { color: '#7A6040', fontSize: 10, fontWeight: '500', flexShrink: 0 },
-  body:         { color: '#7A6040', fontSize: 13, lineHeight: 19 },
+  title:        { fontSize: 14, fontFamily: FONT_FAMILY.bold, flex: 1, marginRight: 8 },
+  time:         { fontSize: 10, fontFamily: FONT_FAMILY.medium, flexShrink: 0 },
+  body:         { fontSize: 13, fontFamily: FONT_FAMILY.regular, lineHeight: 19 },
+  empty:        { alignItems: 'center', paddingTop: SPACING.xxl, paddingHorizontal: SPACING.xl },
+  emptyTitle:   { fontSize: 18, fontFamily: FONT_FAMILY.bold, marginBottom: 10, textAlign: 'center' },
+  emptyBody:    { fontSize: 13, fontFamily: FONT_FAMILY.regular, textAlign: 'center', lineHeight: 20, marginBottom: SPACING.xl },
+  emptyDivider: { height: 2, width: 80, borderRadius: 2, marginBottom: SPACING.md },
+  emptyHint:    { fontSize: 10, fontFamily: FONT_FAMILY.medium, textAlign: 'center', lineHeight: 16, opacity: 0.6 },
 });
 
-// Export unread count for badge use in navigator
-export { UNREAD_COUNT };
+export { NotificationsScreen as default };

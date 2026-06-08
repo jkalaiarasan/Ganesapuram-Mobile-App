@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem(STORAGE_KEY);
         return;
       }
+      console.log('[Auth] Session restored for member:', parsed.id);
       setMember(parsed);
     });
   }, []);
@@ -59,31 +60,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [member?.id]);
 
   const registerDevicePushToken = async (memberId: string) => {
-    if (Platform.OS === 'web') return;
+    console.log('[PushToken] ── Starting registration ──────────────────────');
+    console.log('[PushToken] Member ID:', memberId);
+    console.log('[PushToken] Platform:', Platform.OS);
+
+    if (Platform.OS === 'web') {
+      console.log('[PushToken] Skipping — web platform does not support push');
+      return;
+    }
+
     try {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        console.warn('[PushToken] Permission not granted');
+      // ── Android: set notification channel first ──────────────────────────
+      if (Platform.OS === 'android') {
+        console.log('[PushToken] Setting Android notification channel...');
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'UPR Ganesapuram',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#C9A227',
+        });
+        console.log('[PushToken] ✅ Android channel ready');
+      }
+
+      // ── Request permission ───────────────────────────────────────────────
+      console.log('[PushToken] Requesting notification permission...');
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      console.log('[PushToken] Existing permission status:', existingStatus);
+
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+        console.log('[PushToken] Permission after request:', finalStatus);
+      }
+
+      if (finalStatus !== 'granted') {
+        console.warn('[PushToken] ❌ Permission DENIED — push notifications will not work');
+        console.warn('[PushToken]    User must enable notifications in device settings');
         return;
       }
+      console.log('[PushToken] ✅ Permission granted');
+
+      // ── Get Expo push token ──────────────────────────────────────────────
+      console.log('[PushToken] Fetching Expo push token (projectId: 07ef6392-df4d-4474-8bb4-dcec0beb6cbf)...');
       const tokenData = await Notifications.getExpoPushTokenAsync({
         projectId: '07ef6392-df4d-4474-8bb4-dcec0beb6cbf',
       });
-      console.log('[PushToken] Got token:', tokenData.data);
-      await registerPushToken(memberId, tokenData.data);
-      console.log('[PushToken] Saved to Salesforce for member:', memberId);
-    } catch (err) {
-      console.error('[PushToken] Failed to register push token:', err);
+      const token = tokenData.data;
+      console.log('[PushToken] ✅ Token received:', token);
+      console.log('[PushToken] Token type:', tokenData.type);
+
+      // ── Save to server → Salesforce ──────────────────────────────────────
+      console.log('[PushToken] Sending to server (POST /api/member/push-token)...');
+      console.log('[PushToken] Payload: memberId =', memberId, '| token =', token);
+
+      const result = await registerPushToken(memberId, token);
+      console.log('[PushToken] ✅ Server response:', JSON.stringify(result));
+      console.log('[PushToken] Token saved to Salesforce Member__c.ExpoPushToken__c ✅');
+      console.log('[PushToken] ─────────────────────────────────────────────────');
+
+    } catch (err: any) {
+      console.error('[PushToken] ❌ Registration FAILED');
+      console.error('[PushToken] Error message   :', err?.message ?? String(err));
+      console.error('[PushToken] HTTP status      :', err?.response?.status ?? 'no response');
+      console.error('[PushToken] Server response  :', JSON.stringify(err?.response?.data ?? null));
+      console.error('[PushToken] Full error       :', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+      console.error('[PushToken] ─────────────────────────────────────────────────');
     }
   };
 
   const login = async (memberData: MemberProfile) => {
+    console.log('[Auth] Login success for:', memberData.name, '| id:', memberData.id);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(memberData));
     setMember(memberData);
   };
 
   const logout = async () => {
-    setMember(null);                          // immediate UI update
+    console.log('[Auth] Logout');
+    setMember(null);
     await AsyncStorage.removeItem(STORAGE_KEY);
   };
 
