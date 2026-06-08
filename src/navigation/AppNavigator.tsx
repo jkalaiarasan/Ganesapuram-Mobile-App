@@ -355,8 +355,8 @@ export default function AppNavigator() {
           {/* Reload current page */}
           <TouchableOpacity onPress={handleReload} activeOpacity={0.8} style={ts.fabBtn}>
             <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.fabBtnInner}>
-              <Animated.Text style={[ts.fabIcon, { transform: [{ rotate: reloadAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>
-                🔄
+              <Animated.Text style={[ts.fabReloadIcon, { transform: [{ rotate: reloadAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>
+                ↻
               </Animated.Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -384,6 +384,7 @@ const ts = StyleSheet.create({
   fabBtn:         { borderRadius: RADIUS.full, ...SHADOWS.gold },
   fabBtnInner:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   fabIcon:        { fontSize: 18 },
+  fabReloadIcon:  { fontSize: 24, color: '#1A0F00', fontWeight: '900', lineHeight: 28 },
   notifBadge:     { position: 'absolute', top: -3, right: -3, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   notifBadgeText: { color: '#fff', fontSize: 9, fontFamily: FONT_FAMILY.extrabold },
 });
