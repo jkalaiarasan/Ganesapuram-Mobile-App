@@ -43,12 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [member, setMember] = useState<MemberProfile | null>(null);
   const { showToast } = useToast();
 
-  // Ref for AppState handler — avoids stale closure on member state
   const memberRef = useRef<MemberProfile | null>(null);
   useEffect(() => { memberRef.current = member; }, [member]);
-
-  // Track whether the current push-token registration is from a fresh login
-  const justLoggedIn = useRef(false);
 
   // ── Session restore on app start ─────────────────────────────────────────────
   useEffect(() => {
@@ -78,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('[Auth] Session restored for member:', parsed.id);
       setMember(parsed);
+      // Re-register push token silently on restore (token may have changed)
+      registerDevicePushToken(parsed.id, false);
     })();
   }, []);
 
@@ -102,16 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  // ── Push token — fires on login and session restore ──────────────────────────
-  useEffect(() => {
-    if (!member) return;
-    registerDevicePushToken(member.id);
-  }, [member?.id]);
-
-  const registerDevicePushToken = async (memberId: string) => {
-    const showResult = justLoggedIn.current;
-    justLoggedIn.current = false;
-
+  // showResult = true  → fresh login  → show success/failure toast
+  // showResult = false → session restore → silent
+  const registerDevicePushToken = async (memberId: string, showResult: boolean) => {
     if (Platform.OS === 'web') return;
 
     try {
@@ -146,21 +137,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('[PushToken] ✅ Saved and verified in Salesforce');
         if (showResult) showToast('Device Registered Successfully', 'success');
       } else if (result.success && !result.verified) {
-        console.warn('[PushToken] ⚠️ Saved but verification query did not match');
-        logError('Push Token Verify Failed', `Member: ${memberId} | Saved but re-query mismatch`, memberId);
+        console.warn('[PushToken] ⚠️ Saved but re-query mismatch');
+        logError('Push Token Verify Failed', `Member: ${memberId} | re-query mismatch`, memberId);
         if (showResult) showToast('Device Registration Failed', 'error');
       } else {
         const detail = result.sfDetail
           ? `SF: ${JSON.stringify(result.sfDetail)}`
           : (result.message ?? 'unknown');
-        console.warn('[PushToken] ⚠️ Server returned failure:', detail);
+        console.warn('[PushToken] ⚠️ Server failure:', detail);
         logError('Push Token Not Saved', `Member: ${memberId} | ${detail}`, memberId);
         if (showResult) showToast('Device Registration Failed', 'error');
       }
     } catch (err: any) {
-      console.error('[PushToken] ❌ Registration FAILED:', err?.message);
+      console.error('[PushToken] ❌ FAILED:', err?.message);
       logError('Push Token Failed', `Member: ${memberId} | ${err?.message ?? String(err)}`, memberId);
-      if (showResult) showToast('சாதன பதிவு தோல்வி', 'error');
+      if (showResult) showToast('Device Registration Failed', 'error');
     }
   };
 
@@ -175,17 +166,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setMember(updated);
       }
     } catch {
-      // silently fail — don't log out user on refresh error
+      // silently fail
     }
   };
 
   // ── login ─────────────────────────────────────────────────────────────────────
   const login = async (memberData: MemberProfile, sessionToken?: string) => {
     console.log('[Auth] Login success for:', memberData.name, '| id:', memberData.id);
-    justLoggedIn.current = true;
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(memberData));
     if (sessionToken) await AsyncStorage.setItem(SESSION_TOKEN_KEY, sessionToken);
     setMember(memberData);
+    // Register and toast — called directly so showResult is always reliable
+    registerDevicePushToken(memberData.id, true);
   };
 
   // ── logout ────────────────────────────────────────────────────────────────────

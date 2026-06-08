@@ -204,8 +204,11 @@ export default function ProfileScreen() {
   const [otp, setOtp] = useState('');
   const [otpToken, setOtpToken] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
   const [imgError, setImgError] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const slideAnim  = useRef(new Animated.Value(40)).current;
@@ -235,6 +238,45 @@ export default function ProfileScreen() {
       setConfirmingLogout(false);
     }
   }, [member]);
+
+  const RESEND_COOLDOWN = 30;
+
+  const startResendCountdown = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setResendTimer(RESEND_COOLDOWN);
+    timerRef.current = setInterval(() => {
+      setResendTimer(t => {
+        if (t <= 1) { clearInterval(timerRef.current!); timerRef.current = null; return 0; }
+        return t - 1;
+      });
+    }, 1000);
+  };
+
+  // Start countdown whenever OTP step becomes active
+  useEffect(() => {
+    if (loginStep === 'otp') startResendCountdown();
+    return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
+  }, [loginStep]);
+
+  const handleResendOtp = async () => {
+    setResendLoading(true);
+    try {
+      const res = await requestOtp(email.trim().toLowerCase());
+      if (res.success) {
+        setOtpToken(res.token || '');
+        setOtp('');
+        startResendCountdown();
+        showToast('OTP மீண்டும் அனுப்பப்பட்டது', 'success');
+      } else {
+        showToast(res.message || 'OTP அனுப்ப முடியவில்லை', 'error');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message;
+      showToast(message || 'OTP அனுப்ப தோல்வி', 'error');
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleRequestOtp = async () => {
     if (!email.trim()) return showToast('மின்னஞ்சல் முகவரி உள்ளிடவும்', 'error');
@@ -494,6 +536,23 @@ export default function ProfileScreen() {
                   <TouchableOpacity onPress={() => { setLoginStep('email'); setOtp(''); setOtpToken(''); }} style={{ alignItems: 'center', marginTop: SPACING.md }}>
                     <Text style={{ color: GOLD.primary, fontSize: 13, fontFamily: FONT_FAMILY.semibold, letterSpacing: 0.3 }}>← மின்னஞ்சல் மாற்று</Text>
                   </TouchableOpacity>
+
+                  {/* Resend OTP */}
+                  <View style={{ alignItems: 'center', marginTop: SPACING.sm }}>
+                    {resendTimer > 0 ? (
+                      <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: FONT_FAMILY.regular }}>
+                        {resendTimer}s பிறகு மீண்டும் அனுப்பலாம்
+                      </Text>
+                    ) : resendLoading ? (
+                      <ActivityIndicator color={GOLD.primary} size="small" />
+                    ) : (
+                      <TouchableOpacity onPress={handleResendOtp} activeOpacity={0.7}>
+                        <Text style={{ color: GOLD.light, fontSize: 13, fontFamily: FONT_FAMILY.semibold, letterSpacing: 0.3 }}>
+                          OTP மீண்டும் அனுப்பு ↻
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
 
                   <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.xl }} />
                   <Text style={s.footerNote}>✦  கணேசபுரம்  ✦</Text>
