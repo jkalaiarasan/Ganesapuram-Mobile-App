@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback,
-  Animated, ScrollView, Dimensions, Platform,
+  Animated, ScrollView, Dimensions, Platform, BackHandler,
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -281,6 +281,16 @@ export default function AppNavigator() {
       clearPendingOpen();
     }
   }, [pendingOpenPanel]);
+
+  // Close notification panel on Android hardware back button press
+  useEffect(() => {
+    if (!notifOpen) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setNotifOpen(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [notifOpen]);
 
   return (
     <View style={{ flex: 1 }}>

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { registerPushToken, refreshMemberProfile, logError, checkSession } from '../api';
 import { useToast } from './ToastContext';
 
@@ -123,12 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (finalStatus !== 'granted') {
         console.warn('[PushToken] ❌ Permission DENIED');
+        logError('Push Token Permission Denied', `Member: ${memberId} | status: ${finalStatus}`, memberId);
+        if (showResult) showToast('அறிவிப்பு அனுமதி தேவை — Settings-ல் இயக்கவும்', 'error');
         return;
       }
 
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: '07ef6392-df4d-4474-8bb4-dcec0beb6cbf',
-      });
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ?? '07ef6392-df4d-4474-8bb4-dcec0beb6cbf';
+      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
       const token = tokenData.data;
       console.log('[PushToken] ✅ Token received:', token);
 
