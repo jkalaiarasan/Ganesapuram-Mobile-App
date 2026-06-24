@@ -348,12 +348,11 @@ export default function ProfileScreen() {
       ? member.name.trim().split(/\s+/).slice(0, 2).map(n => n[0]?.toUpperCase()).join('') : '?';
 
     const infoRows = [
-      member.uprId       && { icon: '🪪', label: 'ID',       value: member.uprId,                type: 'text'  },
-      member.phone       && { icon: '📞', label: 'தொலைபேசி',     value: member.phone,                type: 'phone' },
-      member.email       && { icon: '📧', label: 'மின்னஞ்சல்',   value: member.email,                type: 'text'  },
-      member.dateOfBirth && { icon: '🎂', label: 'பிறந்த நாள்',  value: formatDOB(member.dateOfBirth), type: 'text' },
-      member.work        && { icon: '💼', label: 'தொழில்',        value: member.work,                 type: 'text'  },
-      member.location    && { icon: '📍', label: 'இடம்',          value: member.location,             type: 'text'  },
+      member.phone       && { icon: '📞', label: 'தொலைபேசி',      value: member.phone,                  type: 'phone' },
+      member.email       && { icon: '📧', label: 'மின்னஞ்சல்',    value: member.email,                  type: 'text'  },
+      member.dateOfBirth && { icon: '🎂', label: 'பிறந்த நாள்',   value: formatDOB(member.dateOfBirth), type: 'text'  },
+      member.work        && { icon: '💼', label: 'தொழில்',         value: member.work,                   type: 'text'  },
+      member.location    && { icon: '📍', label: 'இடம்',           value: member.location,               type: 'text'  },
     ].filter(Boolean) as Array<{ icon: string; label: string; value: string; type: string }>;
 
     return (

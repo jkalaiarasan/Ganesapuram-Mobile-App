@@ -18,8 +18,9 @@ const { width } = Dimensions.get('window');
 const BASE_URL = 'https://ganesapuram-mobile-app-server.vercel.app/';
 
 interface Member {
-  id: string; name: string; email?: string; uprId?: string;
-  position?: string; department?: string; phone?: string | null; contentVersionId?: string;
+  id: string; name: string; email?: string;
+  position?: string; department?: string; phone?: string | null;
+  work?: string | null; location?: string | null; contentVersionId?: string;
 }
 
 function MemberCard({ member, index, showDeptPos }: { member: Member; index: number; showDeptPos: boolean }) {
@@ -97,13 +98,13 @@ function MemberCard({ member, index, showDeptPos }: { member: Member; index: num
               {showDeptPos && member.department ? (
                 <Text style={s.meta} numberOfLines={1}>{member.department}</Text>
               ) : null}
-              {showDeptPos && member.department && member.uprId ? (
-                <Text style={[s.meta, { color: GOLD.border, marginHorizontal: 4 }]}>•</Text>
-              ) : null}
-              {member.uprId ? (
-                <Text style={[s.meta, { color: GOLD.dark }]}>#{member.uprId}</Text>
-              ) : null}
             </View>
+            {member.work ? (
+              <Text style={s.metaExtra} numberOfLines={1}>💼 {member.work}</Text>
+            ) : null}
+            {member.location ? (
+              <Text style={s.metaExtra} numberOfLines={1}>📍 {member.location}</Text>
+            ) : null}
           </View>
 
           {/* Call button */}
@@ -178,7 +179,8 @@ export default function MembersScreen() {
         m.name?.toLowerCase().includes(q) ||
         m.position?.toLowerCase().includes(q) ||
         m.department?.toLowerCase().includes(q) ||
-        m.uprId?.toLowerCase().includes(q)
+        m.work?.toLowerCase().includes(q) ||
+        m.location?.toLowerCase().includes(q)
       );
     }
     setFiltered(list);
@@ -267,6 +269,7 @@ const cardStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   posText:      { color: GOLD.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.3 },
   metaRow:      { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   meta:         { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium },
+  metaExtra:    { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, marginTop: 2 },
   callBtn:      { marginRight: SPACING.md, flexShrink: 0 },
   callBtnInner: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   callIcon:     { fontSize: 18 },

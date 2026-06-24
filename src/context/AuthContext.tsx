@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { registerPushToken, refreshMemberProfile, logError, checkSession } from '../api';
+import { registerPushToken, clearPushToken, refreshMemberProfile, logError, checkSession } from '../api';
 import { useToast } from './ToastContext';
 
 export interface MemberProfile {
@@ -186,6 +186,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── logout ────────────────────────────────────────────────────────────────────
   const logout = async () => {
     console.log('[Auth] Logout');
+    if (memberRef.current) {
+      await clearPushToken(memberRef.current.id);
+    }
     setMember(null);
     await AsyncStorage.multiRemove([STORAGE_KEY, SESSION_TOKEN_KEY]);
   };

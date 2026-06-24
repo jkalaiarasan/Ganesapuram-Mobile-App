@@ -44,6 +44,14 @@ export async function registerPushToken(memberId: string, expoPushToken: string)
   return res.data;
 }
 
+export async function clearPushToken(memberId: string) {
+  try {
+    await api.delete('/api/member/push-token', { data: { memberId } });
+  } catch {
+    // best-effort; logout must not block
+  }
+}
+
 // Refresh member profile (already logged in)
 export async function refreshMemberProfile(memberId: string, email: string) {
   const res = await api.get('/api/member/profile', { params: { memberId, email } });
