@@ -12,6 +12,7 @@ import MembersScreen from '../screens/MembersScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useRefreshContext } from '../context/RefreshContext';
 import {
   useNotifications,
@@ -258,7 +259,8 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 // ── App navigator ─────────────────────────────────────────────────────────────
 export default function AppNavigator() {
   const { theme, isDark, toggleTheme } = useTheme();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, pushTokenError } = useAuth();
+  const { showToast } = useToast();
   const { unreadCount, pendingOpenPanel, clearPendingOpen } = useNotifications();
   const { refresh } = useRefreshContext();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -377,6 +379,20 @@ export default function AppNavigator() {
               <Text style={ts.fabIcon}>{isDark ? '☀️' : '🌙'}</Text>
             </LinearGradient>
           </TouchableOpacity>
+
+          {/* Device registration error indicator */}
+          {pushTokenError && (
+            <TouchableOpacity
+              onPress={() => showToast(`⚠️ Token Error: ${pushTokenError}`, 'error')}
+              activeOpacity={0.8}
+              style={ts.fabBtn}
+            >
+              <LinearGradient colors={['#7F0000', '#EF4444']} style={ts.fabBtnInner}>
+                <Text style={ts.fabIcon}>⚠️</Text>
+              </LinearGradient>
+              <View style={ts.errorPulse} />
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </View>
 
@@ -397,4 +413,5 @@ const ts = StyleSheet.create({
   fabReloadIcon:  { fontSize: 24, color: '#1A0F00', fontWeight: '900', lineHeight: 28 },
   notifBadge:     { position: 'absolute', top: -3, right: -3, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   notifBadgeText: { color: '#fff', fontSize: 9, fontFamily: FONT_FAMILY.extrabold },
+  errorPulse:     { position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: '#EF4444', borderWidth: 1.5, borderColor: '#fff' },
 });

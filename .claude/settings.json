@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "PowerShell(eas --version 2>&1)",
+      "PowerShell(npx eas --version 2>&1)"
+    ]
+  },
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }

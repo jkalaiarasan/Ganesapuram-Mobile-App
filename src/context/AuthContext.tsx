@@ -24,6 +24,7 @@ export interface MemberProfile {
 interface AuthContextType {
   member: MemberProfile | null;
   isLoggedIn: boolean;
+  pushTokenError: string | null;
   login: (memberData: MemberProfile, sessionToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshMember: () => Promise<void>;
@@ -32,6 +33,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   member: null,
   isLoggedIn: false,
+  pushTokenError: null,
   login: async () => {},
   logout: async () => {},
   refreshMember: async () => {},
@@ -42,6 +44,7 @@ const SESSION_TOKEN_KEY = 'upr_session_token';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [member, setMember] = useState<MemberProfile | null>(null);
+  const [pushTokenError, setPushTokenError] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const memberRef = useRef<MemberProfile | null>(null);
@@ -101,10 +104,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  // showResult = true  → fresh login  → show success/failure toast
-  // showResult = false → session restore → silent
+  // showResult gates the SUCCESS toast only — errors always show so APK failures are visible
   const registerDevicePushToken = async (memberId: string, showResult: boolean) => {
     if (Platform.OS === 'web') return;
+
+    const fail = (label: string, detail: string, toastMsg: string) => {
+      console.warn(`[PushToken] ❌ ${label}:`, detail);
+      setPushTokenError(`${label}: ${detail}`);
+      logError(label, `Member: ${memberId} | ${detail}`, memberId);
+      showToast(toastMsg, 'error');
+    };
 
     try {
       if (Platform.OS === 'android') {
@@ -123,38 +132,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         finalStatus = status;
       }
       if (finalStatus !== 'granted') {
-        console.warn('[PushToken] ❌ Permission DENIED');
-        logError('Push Token Permission Denied', `Member: ${memberId} | status: ${finalStatus}`, memberId);
-        if (showResult) showToast('அறிவிப்பு அனுமதி தேவை — Settings-ல் இயக்கவும்', 'error');
+        fail(
+          'Push Token Permission Denied',
+          `status: ${finalStatus}`,
+          `⚠️ Notification permission ${finalStatus} — Settings > App > Notifications இயக்கவும்`,
+        );
         return;
       }
 
       const projectId =
         Constants.expoConfig?.extra?.eas?.projectId ?? '07ef6392-df4d-4474-8bb4-dcec0beb6cbf';
-      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-      const token = tokenData.data;
-      console.log('[PushToken] ✅ Token received:', token);
+
+      let token: string;
+      try {
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+        token = tokenData.data;
+        console.log('[PushToken] ✅ Token received:', token);
+      } catch (tokenErr: any) {
+        const msg = tokenErr?.message ?? String(tokenErr);
+        fail('Push Token Fetch Failed', `projectId: ${projectId} | ${msg}`, `⚠️ Token fetch failed: ${msg.slice(0, 70)}`);
+        return;
+      }
 
       const result = await registerPushToken(memberId, token);
       if (result.success && result.verified) {
         console.log('[PushToken] ✅ Saved and verified in Salesforce');
+        setPushTokenError(null);
         if (showResult) showToast('Device Registered Successfully', 'success');
       } else if (result.success && !result.verified) {
-        console.warn('[PushToken] ⚠️ Saved but re-query mismatch');
-        logError('Push Token Verify Failed', `Member: ${memberId} | re-query mismatch`, memberId);
-        if (showResult) showToast('Device Registration Failed', 'error');
+        fail(
+          'Push Token Verify Failed',
+          're-query mismatch after save',
+          '⚠️ Device reg saved but verify failed — FAB ⚠️ tap for detail',
+        );
       } else {
         const detail = result.sfDetail
           ? `SF: ${JSON.stringify(result.sfDetail)}`
           : (result.message ?? 'unknown');
-        console.warn('[PushToken] ⚠️ Server failure:', detail);
-        logError('Push Token Not Saved', `Member: ${memberId} | ${detail}`, memberId);
-        if (showResult) showToast('Device Registration Failed', 'error');
+        fail('Push Token Not Saved', detail, `⚠️ Server reg failed: ${detail.slice(0, 60)}`);
       }
     } catch (err: any) {
-      console.error('[PushToken] ❌ FAILED:', err?.message);
-      logError('Push Token Failed', `Member: ${memberId} | ${err?.message ?? String(err)}`, memberId);
-      if (showResult) showToast('Device Registration Failed', 'error');
+      const msg = err?.message ?? String(err);
+      fail('Push Token Failed', msg, `⚠️ Device reg error: ${msg.slice(0, 70)}`);
     }
   };
 
@@ -194,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ member, isLoggedIn: !!member, login, logout, refreshMember }}>
+    <AuthContext.Provider value={{ member, isLoggedIn: !!member, pushTokenError, login, logout, refreshMember }}>
       {children}
     </AuthContext.Provider>
   );
