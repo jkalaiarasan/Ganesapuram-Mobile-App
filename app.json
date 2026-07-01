@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "G One",
-    "slug": "Ganesapuram",
+    "slug": "g-one",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -49,11 +49,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "kalaiarasan.ganesapuram",
     "extra": {
       "eas": {
-        "projectId": "07ef6392-df4d-4474-8bb4-dcec0beb6cbf"
+        "projectId": "88de07d1-70aa-425b-97d2-cdd43c332543"
       }
-    },
-    "owner": "kalaiarasan.ganesapuram"
+    }
   }
 }
