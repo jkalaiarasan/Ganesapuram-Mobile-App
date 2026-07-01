@@ -311,7 +311,7 @@ export default function ProfileScreen() {
         const firstName = res.member.name?.split(' ')[0] || res.member.name;
         const welcome = res.member.type === 'UPR'
           ? `Welcome to UPR, ${firstName}!`
-          : `Hi ${firstName}, welcome to Ganesapuram App`;
+          : `Hi ${firstName}, welcome to G One App`;
         showToast(welcome, 'success');
       } else {
         showToast(res.message || 'OTP சரிபார்ப்பு தோல்வி', 'error');

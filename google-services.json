@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "686270830922",
+    "project_id": "ganesapuram-android",
+    "storage_bucket": "ganesapuram-android.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:686270830922:android:2f9196521c0aa8e89089b3",
+        "android_client_info": {
+          "package_name": "com.gone.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAA3D0Mww1f2oQezzn8IP4Ji2tmUYWavQ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

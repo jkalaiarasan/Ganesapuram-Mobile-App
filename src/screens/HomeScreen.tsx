@@ -236,7 +236,7 @@ export default function HomeScreen() {
 
         <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', paddingBottom: SPACING.xl }}>
           <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
-          <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, letterSpacing: 1 }}>நன்றி. Ganesapuram Mobile App Development Team ✦</Text>
+          <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, letterSpacing: 1 }}>நன்றி. G One Mobile App Development Team ✦</Text>
         </Animated.View>
       </ScrollView>
     </View>

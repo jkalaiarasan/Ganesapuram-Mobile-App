@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Ganesapuram",
+    "name": "G One",
     "slug": "Ganesapuram",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,7 +13,8 @@
       }
     },
     "android": {
-      "package": "com.ganesapuram.app",
+      "package": "com.gone.app",
+      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -52,6 +53,7 @@
       "eas": {
         "projectId": "07ef6392-df4d-4474-8bb4-dcec0beb6cbf"
       }
-    }
+    },
+    "owner": "kalaiarasan.ganesapuram"
   }
 }

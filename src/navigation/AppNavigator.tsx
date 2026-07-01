@@ -12,7 +12,6 @@ import MembersScreen from '../screens/MembersScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
 import { useRefreshContext } from '../context/RefreshContext';
 import {
   useNotifications,
@@ -259,8 +258,7 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 // ── App navigator ─────────────────────────────────────────────────────────────
 export default function AppNavigator() {
   const { theme, isDark, toggleTheme } = useTheme();
-  const { isLoggedIn, pushTokenError } = useAuth();
-  const { showToast } = useToast();
+  const { isLoggedIn } = useAuth();
   const { unreadCount, pendingOpenPanel, clearPendingOpen } = useNotifications();
   const { refresh } = useRefreshContext();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -379,20 +377,6 @@ export default function AppNavigator() {
               <Text style={ts.fabIcon}>{isDark ? '☀️' : '🌙'}</Text>
             </LinearGradient>
           </TouchableOpacity>
-
-          {/* Device registration error indicator */}
-          {pushTokenError && (
-            <TouchableOpacity
-              onPress={() => showToast(`⚠️ Token Error: ${pushTokenError}`, 'error')}
-              activeOpacity={0.8}
-              style={ts.fabBtn}
-            >
-              <LinearGradient colors={['#7F0000', '#EF4444']} style={ts.fabBtnInner}>
-                <Text style={ts.fabIcon}>⚠️</Text>
-              </LinearGradient>
-              <View style={ts.errorPulse} />
-            </TouchableOpacity>
-          )}
         </Animated.View>
       </View>
 
