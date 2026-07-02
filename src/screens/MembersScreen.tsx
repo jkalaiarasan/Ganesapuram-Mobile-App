@@ -7,6 +7,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useRefreshContext } from '../context/RefreshContext';
@@ -21,9 +22,27 @@ interface Member {
   id: string; name: string; email?: string;
   position?: string; department?: string; phone?: string | null;
   work?: string | null; location?: string | null; contentVersionId?: string;
+  lastSeen?: string | null;
 }
 
-function MemberCard({ member, index, showDeptPos }: { member: Member; index: number; showDeptPos: boolean }) {
+const ONLINE_WINDOW_MS = 2 * 60 * 1000; // heartbeat is 60s — within 2 min counts as online
+const ONLINE_GREEN = '#22C55E';
+
+function presenceInfo(lastSeen: string | null | undefined, now: number): { online: boolean; label: string } | null {
+  if (!lastSeen) return null;
+  const diff = now - new Date(lastSeen).getTime();
+  if (Number.isNaN(diff) || diff < 0) return null;
+  if (diff < ONLINE_WINDOW_MS) return { online: true, label: 'Online' };
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return { online: false, label: `${mins}m ago` };
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return { online: false, label: `${hours}h ago` };
+  const days = Math.floor(hours / 24);
+  if (days <= 30) return { online: false, label: `${days}d ago` };
+  return null; // last seen over a month ago — show nothing
+}
+
+function MemberCard({ member, index, showDeptPos, now }: { member: Member; index: number; showDeptPos: boolean; now: number }) {
   const { theme, isDark } = useTheme();
   const anim     = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(1)).current;
@@ -50,6 +69,7 @@ function MemberCard({ member, index, showDeptPos }: { member: Member; index: num
     if (member.phone) Linking.openURL(`tel:${member.phone}`);
   };
 
+  const presence = presenceInfo(member.lastSeen, now);
   const s = cardStyles(theme, isDark);
 
   return (
@@ -82,11 +102,20 @@ function MemberCard({ member, index, showDeptPos }: { member: Member; index: num
                 <Text style={s.initials}>{initials}</Text>
               </LinearGradient>
             )}
+            {presence?.online ? <View style={s.onlineBadge} /> : null}
           </LinearGradient>
 
           {/* Info */}
           <View style={s.info}>
-            <Text style={s.name} numberOfLines={1}>{member.name}</Text>
+            <View style={s.nameRow}>
+              <Text style={s.name} numberOfLines={1}>{member.name}</Text>
+              {presence ? (
+                <View style={s.presenceTag}>
+                  <View style={[s.presenceDot, presence.online && { backgroundColor: ONLINE_GREEN }]} />
+                  <Text style={[s.presenceText, presence.online && { color: ONLINE_GREEN }]}>{presence.label}</Text>
+                </View>
+              ) : null}
+            </View>
 
             {showDeptPos && member.position ? (
               <View style={s.posTag}>
@@ -126,6 +155,7 @@ export default function MembersScreen() {
   const { member: authMember, isLoggedIn } = useAuth();
   const { register, unregister } = useRefreshContext();
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const isUPR = isLoggedIn && authMember?.type === 'UPR';
 
   const [members,  setMembers]  = useState<Member[]>([]);
@@ -134,6 +164,7 @@ export default function MembersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search,   setSearch]   = useState('');
   const [error,    setError]    = useState('');
+  const [now,      setNow]      = useState(Date.now());
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -159,6 +190,22 @@ export default function MembersScreen() {
   }, []);
 
   useEffect(() => { load(); }, []);
+
+  // Presence polling — while this screen is focused, silently refresh lastSeen
+  // every 60s and tick the clock every 30s so "Xm ago" labels stay current.
+  useEffect(() => {
+    if (!isFocused) return;
+    const tick = setInterval(() => setNow(Date.now()), 30 * 1000);
+    const poll = setInterval(async () => {
+      try {
+        const data = await fetchMemberList();
+        if (data.success) { setMembers(data.members); setNow(Date.now()); }
+      } catch {
+        // silent — keep showing the last known list
+      }
+    }, 60 * 1000);
+    return () => { clearInterval(tick); clearInterval(poll); };
+  }, [isFocused]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -245,7 +292,7 @@ export default function MembersScreen() {
               <Text style={s.infoText}>"{search}" - தேடல் முடிவு இல்லை</Text>
             </View>
           }
-          renderItem={({ item, index }) => <MemberCard member={item} index={index} showDeptPos={isUPR} />}
+          renderItem={({ item, index }) => <MemberCard member={item} index={index} showDeptPos={isUPR} now={now} />}
         />
       )}
     </View>
@@ -263,8 +310,13 @@ const cardStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   avatar:       { width: 56, height: 56, borderRadius: 28 },
   avatarFallback: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   initials:     { color: GOLD.primary, fontSize: 18, fontFamily: FONT_FAMILY.black },
+  onlineBadge:  { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 7, backgroundColor: '#22C55E', borderWidth: 2, borderColor: isDark ? '#111111' : '#FFFFFF' },
   info:         { flex: 1, paddingVertical: SPACING.md, paddingRight: SPACING.sm },
-  name:         { color: theme.text, fontSize: 15, fontFamily: FONT_FAMILY.extrabold, marginBottom: 4 },
+  nameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  name:         { color: theme.text, fontSize: 15, fontFamily: FONT_FAMILY.extrabold, flexShrink: 1 },
+  presenceTag:  { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
+  presenceDot:  { width: 7, height: 7, borderRadius: 3.5, backgroundColor: theme.textMuted },
+  presenceText: { color: theme.textMuted, fontSize: 10, fontFamily: FONT_FAMILY.medium },
   posTag:       { alignSelf: 'flex-start', backgroundColor: GOLD.subtle, borderRadius: RADIUS.full, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 1, borderColor: GOLD.border, marginBottom: 4 },
   posText:      { color: GOLD.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.3 },
   metaRow:      { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },

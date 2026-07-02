@@ -52,6 +52,15 @@ export async function clearPushToken(memberId: string) {
   }
 }
 
+// Online presence heartbeat — fire-and-forget, must never break the app
+export async function sendHeartbeat(memberId: string) {
+  try {
+    await api.post('/api/member/heartbeat', { memberId });
+  } catch {
+    // silent — presence is best-effort
+  }
+}
+
 // Refresh member profile (already logged in)
 export async function refreshMemberProfile(memberId: string, email: string) {
   const res = await api.get('/api/member/profile', { params: { memberId, email } });

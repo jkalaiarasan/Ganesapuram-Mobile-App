@@ -254,5 +254,3 @@ const s = StyleSheet.create({
   emptyDivider: { height: 2, width: 80, borderRadius: 2, marginBottom: SPACING.md },
   emptyHint:    { fontSize: 10, fontFamily: FONT_FAMILY.medium, textAlign: 'center', lineHeight: 16, opacity: 0.6 },
 });
-
-export { NotificationsScreen as default };
