@@ -9,3 +9,15 @@ Logs for your project will appear below.
 Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
 Web .\index.ts ░░░░░░░░░░░░░░░░  1.0% (1/1)
 Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% ( 51/147)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% (159/297)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% (216/380)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% (340/531)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% (422/623)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% (572/755)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% (697/895)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77.0% ( 911/1038)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86.0% (1005/1115)
+Web Bundled 41978ms index.ts (1239 modules)
+Web Bundled 41ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+ LOG  [web] Logs will appear in the browser console
