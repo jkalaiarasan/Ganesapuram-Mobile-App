@@ -1,0 +1,11 @@
+
+> g-one@1.0.0 web
+> expo start --web
+
+Starting project at C:\Users\jkala\OneDrive\Desktop\Ganesapuram\Ganesapuram
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web .\index.ts ░░░░░░░░░░░░░░░░  1.0% (1/1)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% ( 51/147)
