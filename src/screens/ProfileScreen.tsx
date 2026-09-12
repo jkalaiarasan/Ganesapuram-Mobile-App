@@ -11,7 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useRefreshContext } from '../context/RefreshContext';
-import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
+import { ACCENT, ON_ACCENT, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
 import { requestOtp, verifyOtp, logError } from '../api';
 import StarBackground from '../components/StarBackground';
 
@@ -75,9 +75,9 @@ function OtpBoxes({ value, onChange, theme, isDark }: {
                   position: 'absolute', inset: -3,
                   borderRadius: RADIUS.md + 3,
                   borderWidth: 2,
-                  borderColor: GOLD.primary,
+                  borderColor: ACCENT.primary,
                   opacity: cursorAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
-                  shadowColor: GOLD.primary,
+                  shadowColor: ACCENT.primary,
                   shadowOpacity: 0.9,
                   shadowRadius: 8,
                   shadowOffset: { width: 0, height: 0 },
@@ -88,29 +88,29 @@ function OtpBoxes({ value, onChange, theme, isDark }: {
               <LinearGradient
                 colors={
                   isFilled
-                    ? [GOLD.dark, GOLD.primary]
+                    ? [ACCENT.dark, ACCENT.primary]
                     : isActive
-                      ? (isDark ? ['rgba(201,162,39,0.18)', 'rgba(201,162,39,0.10)'] : ['rgba(201,162,39,0.14)', 'rgba(201,162,39,0.08)'])
+                      ? [ACCENT.tintStrong, ACCENT.tintSoft]
                       : (isDark ? ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)'] : ['rgba(0,0,0,0.04)', 'rgba(0,0,0,0.02)'])
                 }
                 style={{
                   width: 44, height: 52, borderRadius: RADIUS.md,
                   borderWidth: isActive ? 1.5 : isFilled ? 0 : 1,
-                  borderColor: isActive ? GOLD.primary : GOLD.border,
+                  borderColor: isActive ? ACCENT.primary : ACCENT.border,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
                 {isFilled ? (
-                  <Text style={{ color: '#1A0F00', fontSize: 22, fontFamily: FONT_FAMILY.black }}>{d}</Text>
+                  <Text style={{ color: ON_ACCENT, fontSize: 22, fontFamily: FONT_FAMILY.black }}>{d}</Text>
                 ) : isActive ? (
                   <Animated.View style={{
                     width: 2, height: 24, borderRadius: 1,
-                    backgroundColor: GOLD.primary,
+                    backgroundColor: ACCENT.primary,
                     opacity: cursorAnim,
                   }} />
                 ) : (
-                  <Text style={{ color: GOLD.border, fontSize: 10, fontFamily: FONT_FAMILY.black, opacity: 0.5 }}>•</Text>
+                  <Text style={{ color: ACCENT.border, fontSize: 10, fontFamily: FONT_FAMILY.black, opacity: 0.5 }}>•</Text>
                 )}
               </LinearGradient>
             </View>
@@ -148,11 +148,11 @@ function InfoRow({ row, index, theme, isDark }: {
 
   const card = (
     <LinearGradient colors={theme.gradients.card as any} style={IS.row}>
-      <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={IS.bar} />
+      <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={IS.bar} />
       <Text style={IS.icon}>{row.icon}</Text>
       <View style={{ flex: 1 }}>
         <Text style={IS.label}>{row.label}</Text>
-        <Text style={[IS.value, { color: isPhone ? GOLD.light : theme.text }]} numberOfLines={2}>{row.value}</Text>
+        <Text style={[IS.value, { color: isPhone ? ACCENT.light : theme.text }]} numberOfLines={2}>{row.value}</Text>
       </View>
       {isPhone && (
         <View style={IS.callChip}>
@@ -170,13 +170,13 @@ function InfoRow({ row, index, theme, isDark }: {
 }
 
 const IS = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: GOLD.border, overflow: 'hidden', minHeight: 64 },
-  bar: { width: 3, alignSelf: 'stretch' },
+  row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: ACCENT.border, overflow: 'hidden', minHeight: 68, ...SHADOWS.card },
+  bar: { width: 4, alignSelf: 'stretch' },
   icon: { fontSize: 22, marginHorizontal: SPACING.md },
-  label: { color: GOLD.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.5, marginBottom: 3 },
+  label: { color: ACCENT.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.5, marginBottom: 3 },
   value: { fontSize: 15, fontFamily: FONT_FAMILY.semibold, lineHeight: 20 },
-  callChip: { backgroundColor: GOLD.primary, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 5, marginRight: SPACING.sm },
-  callChipText: { color: '#1A0F00', fontSize: 11, fontFamily: FONT_FAMILY.extrabold },
+  callChip: { backgroundColor: ACCENT.primary, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 5, marginRight: SPACING.sm },
+  callChipText: { color: ON_ACCENT, fontSize: 11, fontFamily: FONT_FAMILY.extrabold },
 });
 
 // ── Main screen ───────────────────────────────────────────────────────────────
@@ -365,25 +365,25 @@ export default function ProfileScreen() {
           contentContainerStyle={s.profileScroll}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />
           }
         >
 
           {/* ── Hero ── */}
           <LinearGradient
-            colors={isDark ? ['rgba(20,20,20,0.98)', 'rgba(12,12,12,0.95)'] : ['rgba(255,255,255,0.99)', 'rgba(248,248,250,0.97)']}
+            colors={theme.gradients.header as any}
             style={s.heroBanner}
           >
-            <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 2, width: '100%' }} />
+            <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 2, width: '100%' }} />
 
             <View style={[s.heroContent, { paddingTop: Math.max(insets.top, 28) + SPACING.md }]}>
               {/* Avatar */}
               <Animated.View style={{ transform: [{ scale: scaleAnim }], marginBottom: SPACING.md }}>
-                <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.avatarGlow}>
-                  <View style={[s.avatarRing, { backgroundColor: isDark ? '#0C0C0C' : '#FFFFFF' }]}>
+                <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.avatarGlow}>
+                  <View style={[s.avatarRing, { backgroundColor: theme.surface }]}>
                     {imageUri
                       ? <Image source={{ uri: imageUri }} style={s.avatar} onError={() => setImgError(true)} />
-                      : <LinearGradient colors={isDark ? ['#1A1A1A', '#222222'] : ['#F8F8F8', '#F0F0F0']} style={s.avatarFallback}>
+                      : <LinearGradient colors={theme.gradients.avatar as any} style={s.avatarFallback}>
                           <Text style={s.initials}>{initials}</Text>
                         </LinearGradient>
                     }
@@ -394,7 +394,7 @@ export default function ProfileScreen() {
               <Animated.View style={{ alignItems: 'center', opacity: fadeAnim }}>
                 <Text style={s.name}>{member.name}</Text>
                 {member.position
-                  ? <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.posBadge}>
+                  ? <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.posBadge}>
                       <Text style={s.posText}>✦  {member.position}  ✦</Text>
                     </LinearGradient>
                   : null}
@@ -402,7 +402,7 @@ export default function ProfileScreen() {
               </Animated.View>
             </View>
 
-            <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.md }} />
+            <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.md }} />
           </LinearGradient>
 
           {/* ── Info rows ── */}
@@ -414,7 +414,7 @@ export default function ProfileScreen() {
 
           {/* ── Logout ── */}
           <View style={{ paddingHorizontal: SPACING.md, paddingBottom: 100, marginTop: SPACING.sm }}>
-            <LinearGradient colors={['transparent', GOLD.border, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginBottom: SPACING.lg }} />
+            <LinearGradient colors={['transparent', ACCENT.border, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginBottom: SPACING.lg }} />
 
             {confirmingLogout ? (
               <View style={s.confirmBox}>
@@ -459,11 +459,11 @@ export default function ProfileScreen() {
             /* ── EMAIL STEP ── */
             <Animated.View style={[s.loginCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
               <LinearGradient colors={theme.gradients.card as any} style={s.loginCardGrad}>
-                <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl }} />
+                <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl }} />
 
                 <View style={s.loginBody}>
                   <Animated.View style={[s.emblemWrap, { transform: [{ scale: pulseAnim }] }]}>
-                    <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.emblem}>
+                    <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.emblem}>
                       <Text style={{ fontSize: 40 }}>⚜️</Text>
                     </LinearGradient>
                   </Animated.View>
@@ -471,7 +471,7 @@ export default function ProfileScreen() {
                   <Text style={s.loginTitle}>உறுப்பினர் உள்நுழைவு</Text>
                   <Text style={s.loginSub}>கணேசபுரம்</Text>
 
-                  <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginVertical: SPACING.lg }} />
+                  <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginVertical: SPACING.lg }} />
 
                   <Text style={s.fieldLabel}>மின்னஞ்சல் முகவரி</Text>
                   <View style={s.inputRow}>
@@ -488,12 +488,12 @@ export default function ProfileScreen() {
                   </View>
 
                   <TouchableOpacity onPress={handleRequestOtp} disabled={loading} activeOpacity={0.85} style={s.btn}>
-                    <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnInner}>
-                      {loading ? <ActivityIndicator color="#1A0F00" /> : <Text style={s.btnText}>OTP அனுப்பு  →</Text>}
+                    <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnInner}>
+                      {loading ? <ActivityIndicator color={ON_ACCENT} /> : <Text style={s.btnText}>OTP அனுப்பு  →</Text>}
                     </LinearGradient>
                   </TouchableOpacity>
 
-                  <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.xl }} />
+                  <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.xl }} />
                   <Text style={s.footerNote}>✦  கணேசபுரம்  ✦</Text>
                 </View>
               </LinearGradient>
@@ -503,11 +503,11 @@ export default function ProfileScreen() {
             /* ── OTP STEP ── */
             <Animated.View style={[s.loginCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
               <LinearGradient colors={theme.gradients.card as any} style={s.loginCardGrad}>
-                <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl }} />
+                <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl }} />
 
                 <View style={s.loginBody}>
                   <Animated.View style={[s.emblemWrap, { transform: [{ scale: pulseAnim }] }]}>
-                    <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.emblem}>
+                    <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.emblem}>
                       <Text style={{ fontSize: 40 }}>🔐</Text>
                     </LinearGradient>
                   </Animated.View>
@@ -515,7 +515,7 @@ export default function ProfileScreen() {
                   <Text style={s.loginTitle}>OTP சரிபார்ப்பு</Text>
                   <Text style={s.loginSub}>கணேசபுரம்</Text>
 
-                  <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.md }} />
+                  <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.md }} />
 
                   <View style={s.emailHint}>
                     <Text style={s.emailHintText}>📩  {email}</Text>
@@ -527,13 +527,13 @@ export default function ProfileScreen() {
                   <OtpBoxes value={otp} onChange={setOtp} theme={theme} isDark={isDark} />
 
                   <TouchableOpacity onPress={handleVerifyOtp} disabled={loading || otp.length < 6} activeOpacity={0.85} style={[s.btn, { opacity: otp.length < 6 ? 0.5 : 1 }]}>
-                    <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnInner}>
-                      {loading ? <ActivityIndicator color="#1A0F00" /> : <Text style={s.btnText}>சரிபார் & உள்நுழை  ✓</Text>}
+                    <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnInner}>
+                      {loading ? <ActivityIndicator color={ON_ACCENT} /> : <Text style={s.btnText}>சரிபார் & உள்நுழை  ✓</Text>}
                     </LinearGradient>
                   </TouchableOpacity>
 
                   <TouchableOpacity onPress={() => { setLoginStep('email'); setOtp(''); setOtpToken(''); }} style={{ alignItems: 'center', marginTop: SPACING.md }}>
-                    <Text style={{ color: GOLD.primary, fontSize: 13, fontFamily: FONT_FAMILY.semibold, letterSpacing: 0.3 }}>← மின்னஞ்சல் மாற்று</Text>
+                    <Text style={{ color: ACCENT.primary, fontSize: 13, fontFamily: FONT_FAMILY.semibold, letterSpacing: 0.3 }}>← மின்னஞ்சல் மாற்று</Text>
                   </TouchableOpacity>
 
                   {/* Resend OTP */}
@@ -543,17 +543,17 @@ export default function ProfileScreen() {
                         {resendTimer}s பிறகு மீண்டும் அனுப்பலாம்
                       </Text>
                     ) : resendLoading ? (
-                      <ActivityIndicator color={GOLD.primary} size="small" />
+                      <ActivityIndicator color={ACCENT.primary} size="small" />
                     ) : (
                       <TouchableOpacity onPress={handleResendOtp} activeOpacity={0.7}>
-                        <Text style={{ color: GOLD.light, fontSize: 13, fontFamily: FONT_FAMILY.semibold, letterSpacing: 0.3 }}>
+                        <Text style={{ color: ACCENT.light, fontSize: 13, fontFamily: FONT_FAMILY.semibold, letterSpacing: 0.3 }}>
                           OTP மீண்டும் அனுப்பு ↻
                         </Text>
                       </TouchableOpacity>
                     )}
                   </View>
 
-                  <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.xl }} />
+                  <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.xl }} />
                   <Text style={s.footerNote}>✦  கணேசபுரம்  ✦</Text>
                 </View>
               </LinearGradient>
@@ -571,47 +571,47 @@ const styles = (theme: any, isDark: boolean) => StyleSheet.create({
 
   // Profile
   profileScroll: { flexGrow: 1 },
-  heroBanner: { alignItems: 'center', paddingBottom: SPACING.lg },
+  heroBanner: { alignItems: 'center', paddingBottom: SPACING.lg, borderBottomWidth: 1, borderBottomColor: ACCENT.border },
   heroContent: { alignItems: 'center', paddingTop: SPACING.xl, paddingHorizontal: SPACING.lg },
-  avatarGlow: { padding: 3, borderRadius: 78, ...SHADOWS.gold },
-  avatarRing: { padding: 4, borderRadius: 74 },
-  avatar: { width: 128, height: 128, borderRadius: 64 },
-  avatarFallback: { width: 128, height: 128, borderRadius: 64, alignItems: 'center', justifyContent: 'center' },
-  initials: { color: GOLD.primary, fontSize: 46, fontFamily: FONT_FAMILY.black },
-  name: { color: theme.text, fontSize: 24, fontFamily: FONT_FAMILY.black, textAlign: 'center', marginBottom: SPACING.sm, letterSpacing: -0.3 },
+  avatarGlow: { padding: 3, borderRadius: 12, ...SHADOWS.accent },
+  avatarRing: { padding: 4, borderRadius: 10 },
+  avatar: { width: 128, height: 128, borderRadius: 8 },
+  avatarFallback: { width: 128, height: 128, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  initials: { color: ACCENT.primary, fontSize: 46, fontFamily: FONT_FAMILY.black },
+  name: { color: theme.text, fontSize: 26, fontFamily: FONT_FAMILY.black, textAlign: 'center', marginBottom: SPACING.sm },
   posBadge: { borderRadius: RADIUS.full, paddingHorizontal: SPACING.lg, paddingVertical: 8, marginBottom: SPACING.sm },
-  posText: { color: '#1A0F00', fontFamily: FONT_FAMILY.extrabold, fontSize: 13, letterSpacing: 0.5 },
+  posText: { color: ON_ACCENT, fontFamily: FONT_FAMILY.extrabold, fontSize: 13, letterSpacing: 0.5 },
   dept: { color: theme.textSecondary, fontSize: 13, fontFamily: FONT_FAMILY.medium },
   logoutBtn: { borderRadius: RADIUS.lg },
-  logoutInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: RADIUS.lg, borderWidth: 1.5, gap: 10 },
+  logoutInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: RADIUS.lg, borderWidth: 1.5, gap: 10, backgroundColor: isDark ? 'rgba(255,80,80,0.06)' : 'rgba(220,38,38,0.04)' },
   logoutText: { fontSize: 16, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 0.5 },
   confirmBox: { backgroundColor: isDark ? 'rgba(22,8,8,0.92)' : 'rgba(255,240,240,0.97)', borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: isDark ? 'rgba(255,80,80,0.4)' : 'rgba(220,38,38,0.35)', padding: SPACING.lg },
   confirmTitle: { color: isDark ? '#FCA5A5' : '#DC2626', fontSize: 15, fontFamily: FONT_FAMILY.bold, textAlign: 'center', marginBottom: SPACING.md },
   confirmRow: { flexDirection: 'row', gap: SPACING.sm },
   confirmYes: { flex: 1, backgroundColor: '#DC2626', borderRadius: RADIUS.full, paddingVertical: 13, alignItems: 'center' },
   confirmYesText: { color: '#fff', fontFamily: FONT_FAMILY.extrabold, fontSize: 14 },
-  confirmNo: { flex: 1, borderRadius: RADIUS.full, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: GOLD.border },
+  confirmNo: { flex: 1, borderRadius: RADIUS.full, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: ACCENT.border },
   confirmNoText: { fontFamily: FONT_FAMILY.bold, fontSize: 14 },
 
   // Login shared
   loginScroll: { flexGrow: 1, justifyContent: 'center', padding: SPACING.md },
-  loginCard: { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 1, borderColor: GOLD.border, ...SHADOWS.gold },
+  loginCard: { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 1, borderColor: ACCENT.border, ...SHADOWS.card },
   loginCardGrad: { borderRadius: RADIUS.xl },
   loginBody: { padding: SPACING.lg },
   emblemWrap: { alignSelf: 'center', marginBottom: SPACING.md },
-  emblem: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', ...SHADOWS.gold },
-  loginTitle: { color: theme.text, fontSize: 22, fontFamily: FONT_FAMILY.black, textAlign: 'center', marginBottom: 4 },
-  loginSub: { color: GOLD.primary, fontSize: 11, fontFamily: FONT_FAMILY.bold, textAlign: 'center', letterSpacing: 2 },
+  emblem: { width: 88, height: 88, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', ...SHADOWS.accent },
+  loginTitle: { color: theme.text, fontSize: 24, fontFamily: FONT_FAMILY.black, textAlign: 'center', marginBottom: 4 },
+  loginSub: { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.bold, textAlign: 'center', letterSpacing: 2 },
   fieldLabel: { color: theme.textSecondary, fontSize: 11, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.5, marginBottom: 8 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 13, marginBottom: SPACING.md, borderWidth: 1, borderColor: GOLD.border },
+  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(248,250,252,0.82)', borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 13, marginBottom: SPACING.md, borderWidth: 1, borderColor: ACCENT.border },
   input: { flex: 1, color: theme.text, fontSize: 15, fontFamily: FONT_FAMILY.regular },
   btn: { borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.sm },
   btnInner: { paddingVertical: 15, alignItems: 'center', borderRadius: RADIUS.full },
-  btnText: { color: '#1A0F00', fontFamily: FONT_FAMILY.extrabold, fontSize: 15, letterSpacing: 0.3 },
+  btnText: { color: ON_ACCENT, fontFamily: FONT_FAMILY.extrabold, fontSize: 15, letterSpacing: 0.3 },
 
   // OTP step extras
-  emailHint: { backgroundColor: isDark ? 'rgba(201,162,39,0.10)' : 'rgba(201,162,39,0.08)', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.sm, marginBottom: SPACING.lg, borderWidth: 1, borderColor: GOLD.border, alignItems: 'center' },
-  emailHintText: { color: GOLD.primary, fontSize: 13, fontFamily: FONT_FAMILY.bold },
+  emailHint: { backgroundColor: isDark ? ACCENT.tintSoft : 'rgba(58,46,40,0.05)', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.sm, marginBottom: SPACING.lg, borderWidth: 1, borderColor: ACCENT.border, alignItems: 'center' },
+  emailHintText: { color: ACCENT.primary, fontSize: 13, fontFamily: FONT_FAMILY.bold },
   emailHintSub: { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.regular, marginTop: 4 },
-  footerNote: { color: GOLD.primary, fontSize: 11, fontFamily: FONT_FAMILY.medium, textAlign: 'center', marginTop: SPACING.md, letterSpacing: 3, opacity: 0.6 },
+  footerNote: { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.medium, textAlign: 'center', marginTop: SPACING.md, letterSpacing: 3, opacity: 0.6 },
 });

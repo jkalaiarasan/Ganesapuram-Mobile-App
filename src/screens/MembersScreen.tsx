@@ -11,7 +11,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useRefreshContext } from '../context/RefreshContext';
-import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
+import { ACCENT, ON_ACCENT, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
 import { fetchMemberList, logError } from '../api';
 import StarBackground from '../components/StarBackground';
 
@@ -26,7 +26,7 @@ interface Member {
 }
 
 const ONLINE_WINDOW_MS = 2 * 60 * 1000; // heartbeat is 60s — within 2 min counts as online
-const ONLINE_GREEN = '#22C55E';
+const ONLINE_GREEN = '#4ADE80';
 
 function presenceInfo(lastSeen: string | null | undefined, now: number): { online: boolean; label: string } | null {
   if (!lastSeen) return null;
@@ -85,18 +85,18 @@ function MemberCard({ member, index, showDeptPos, now }: { member: Member; index
         <LinearGradient colors={theme.gradients.card as any} style={s.card}>
           {/* Gold left accent bar */}
           <LinearGradient
-            colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]}
+            colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]}
             start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
             style={s.leftBar}
           />
 
           {/* Avatar */}
-          <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.avatarRing}>
+          <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={s.avatarRing}>
             {imageUri ? (
               <Image source={{ uri: imageUri }} style={s.avatar} onError={() => setImgError(true)} />
             ) : (
               <LinearGradient
-                colors={isDark ? ['#1A1A1A', '#222222'] : ['#F8F8F8', '#F0F0F0']}
+                colors={theme.gradients.avatar as any}
                 style={s.avatarFallback}
               >
                 <Text style={s.initials}>{initials}</Text>
@@ -139,7 +139,7 @@ function MemberCard({ member, index, showDeptPos, now }: { member: Member; index
           {/* Call button */}
           {member.phone ? (
             <TouchableOpacity onPress={handleCall} activeOpacity={0.75} style={s.callBtn}>
-              <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.callBtnInner}>
+              <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={s.callBtnInner}>
                 <Text style={s.callIcon}>📞</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -248,16 +248,16 @@ export default function MembersScreen() {
             <Text style={s.headerTitle}>உறுப்பினர்கள்</Text>
             <Text style={s.headerCount}>{members.length} பேர்</Text>
           </View>
-          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginBottom: SPACING.sm }} />
+          <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginBottom: SPACING.sm }} />
           <View style={s.searchWrap}>
-            <Text style={{ color: GOLD.primary, marginRight: 8, fontSize: 16 }}>🔍</Text>
+            <Text style={{ color: ACCENT.primary, marginRight: 8, fontSize: 16 }}>🔍</Text>
             <TextInput
               style={s.searchInput} placeholder="தேடுங்கள்..." placeholderTextColor={theme.textMuted}
               value={search} onChangeText={setSearch} autoCapitalize="none" autoCorrect={false}
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')}>
-                <Text style={{ color: GOLD.primary, fontSize: 16, paddingLeft: 8 }}>✕</Text>
+                <Text style={{ color: ACCENT.primary, fontSize: 16, paddingLeft: 8 }}>✕</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -266,16 +266,16 @@ export default function MembersScreen() {
 
       {loading ? (
         <View style={s.center}>
-          <ActivityIndicator color={GOLD.primary} size="large" />
-          <Text style={[s.infoText, { marginTop: 12 }]}>ஏற்றுகிறது...</Text>
+          <ActivityIndicator color={ACCENT.primary} size="large" />
+          <Text style={[s.infoText, { marginTop: 12 }]}>Spinning...</Text>
         </View>
       ) : error ? (
         <View style={s.center}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>🌐</Text>
           <Text style={s.infoText}>{error}</Text>
           <TouchableOpacity onPress={() => { setLoading(true); load(); }} style={s.retryBtn}>
-            <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.retryBtnInner}>
-              <Text style={{ color: '#1A0F00', fontFamily: FONT_FAMILY.extrabold }}>மீண்டும் முயற்சி</Text>
+            <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={s.retryBtnInner}>
+              <Text style={{ color: ON_ACCENT, fontFamily: FONT_FAMILY.extrabold }}>மீண்டும் முயற்சி</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -285,7 +285,7 @@ export default function MembersScreen() {
           keyExtractor={item => item.id}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />}
           ListEmptyComponent={
             <View style={s.center}>
               <Text style={{ fontSize: 48, marginBottom: 8 }}>👥</Text>
@@ -302,39 +302,39 @@ export default function MembersScreen() {
 const cardStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: RADIUS.xl, borderWidth: 1, borderColor: GOLD.border,
-    overflow: 'hidden', minHeight: 80, ...SHADOWS.card,
+    borderRadius: RADIUS.xl, borderWidth: 1, borderColor: ACCENT.border,
+    backgroundColor: theme.card, overflow: 'hidden', minHeight: 92, ...SHADOWS.card,
   },
-  leftBar:      { width: 3, alignSelf: 'stretch' },
-  avatarRing:   { padding: 2.5, borderRadius: 36, marginHorizontal: SPACING.md, flexShrink: 0 },
-  avatar:       { width: 56, height: 56, borderRadius: 28 },
-  avatarFallback: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  initials:     { color: GOLD.primary, fontSize: 18, fontFamily: FONT_FAMILY.black },
-  onlineBadge:  { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 7, backgroundColor: '#22C55E', borderWidth: 2, borderColor: isDark ? '#111111' : '#FFFFFF' },
+  leftBar:      { width: 4, alignSelf: 'stretch' },
+  avatarRing:   { padding: 2.5, borderRadius: 10, marginHorizontal: SPACING.md, flexShrink: 0 },
+  avatar:       { width: 58, height: 58, borderRadius: 8 },
+  avatarFallback: { width: 58, height: 58, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  initials:     { color: ACCENT.primary, fontSize: 18, fontFamily: FONT_FAMILY.black },
+  onlineBadge:  { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 7, backgroundColor: ONLINE_GREEN, borderWidth: 2, borderColor: theme.surface },
   info:         { flex: 1, paddingVertical: SPACING.md, paddingRight: SPACING.sm },
   nameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   name:         { color: theme.text, fontSize: 15, fontFamily: FONT_FAMILY.extrabold, flexShrink: 1 },
   presenceTag:  { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
   presenceDot:  { width: 7, height: 7, borderRadius: 3.5, backgroundColor: theme.textMuted },
   presenceText: { color: theme.textMuted, fontSize: 10, fontFamily: FONT_FAMILY.medium },
-  posTag:       { alignSelf: 'flex-start', backgroundColor: GOLD.subtle, borderRadius: RADIUS.full, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 1, borderColor: GOLD.border, marginBottom: 4 },
-  posText:      { color: GOLD.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.3 },
+  posTag:       { alignSelf: 'flex-start', backgroundColor: ACCENT.subtle, borderRadius: RADIUS.full, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 1, borderColor: ACCENT.border, marginBottom: 4 },
+  posText:      { color: ACCENT.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.3 },
   metaRow:      { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   meta:         { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium },
   metaExtra:    { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, marginTop: 2 },
   callBtn:      { marginRight: SPACING.md, flexShrink: 0 },
-  callBtnInner: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  callBtnInner: { width: 42, height: 42, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
   callIcon:     { fontSize: 18 },
 });
 
 const styles = (theme: any, isDark: boolean) => StyleSheet.create({
   root:        { flex: 1, backgroundColor: theme.background },
   header:      { zIndex: 10 },
-  headerBg:    { paddingTop: 50, paddingHorizontal: SPACING.md, paddingBottom: 0 },
+  headerBg:    { paddingTop: 50, paddingHorizontal: SPACING.md, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: ACCENT.border },
   headerInner: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: SPACING.sm },
-  headerTitle: { color: theme.text, fontSize: 22, fontFamily: FONT_FAMILY.black },
+  headerTitle: { color: theme.text, fontSize: 26, fontFamily: FONT_FAMILY.black },
   headerCount: { color: theme.textMuted, fontSize: 12, fontFamily: FONT_FAMILY.medium },
-  searchWrap:  { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 10, marginBottom: SPACING.md, borderWidth: 1, borderColor: GOLD.border },
+  searchWrap:  { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(248,250,252,0.82)', borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 11, marginBottom: SPACING.md, borderWidth: 1, borderColor: ACCENT.border, ...SHADOWS.card },
   searchInput: { flex: 1, color: theme.text, fontSize: 14, fontFamily: FONT_FAMILY.regular },
   listContent: { padding: SPACING.md, paddingBottom: 100 },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },

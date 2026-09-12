@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { View, Animated, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { ACCENT, DEEP } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -57,16 +58,44 @@ const Star = memo(({ x, y, size, delay, duration, color, minOpacity }: StarProps
 export default function StarBackground() {
   const { isDark } = useTheme();
 
-  // Dark mode: bright gold on near-black — subtle shimmer
-  // Light mode: rich dark-gold on white — visible twinkle
-  const starColor  = isDark ? '#F5D06E' : '#7A5010';
-  const minOpacity = isDark ? 0.10       : 0.28;
+  const starColor  = isDark ? ACCENT.light : DEEP.primary;
+  const minOpacity = isDark ? 0.06       : 0.11;
+  const lineColor = isDark ? 'rgba(217,119,87,0.10)' : 'rgba(58,46,40,0.07)';
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[styles.diagonal, styles.diagonalOne, { backgroundColor: lineColor }]} />
+      <View style={[styles.diagonal, styles.diagonalTwo, { backgroundColor: lineColor }]} />
+      <View style={[styles.glassBand, { borderColor: lineColor }]} />
       {stars.map(s => (
         <Star key={s.id} {...s} color={starColor} minOpacity={minOpacity} />
       ))}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  diagonal: {
+    position: 'absolute',
+    width: width * 1.4,
+    height: 1,
+    left: -width * 0.2,
+    transform: [{ rotate: '-18deg' }],
+  },
+  diagonalOne: {
+    top: height * 0.18,
+  },
+  diagonalTwo: {
+    top: height * 0.62,
+  },
+  glassBand: {
+    position: 'absolute',
+    top: height * 0.08,
+    left: width * 0.08,
+    right: width * 0.08,
+    height: height * 0.82,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    opacity: 0.7,
+  },
+});

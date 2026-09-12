@@ -9,7 +9,7 @@ import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useRefreshContext } from '../context/RefreshContext';
-import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
+import { ACCENT, DEEP, ON_ACCENT, SOFT_WHITE, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
 import { fetchKural, fetchWeather, logError } from '../api';
 import StarBackground from '../components/StarBackground';
 
@@ -130,28 +130,34 @@ export default function HomeScreen() {
       <StarBackground />
 
       <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD.primary} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />}>
 
         {/* Header */}
         <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }], paddingTop: Math.max(insets.top, 28) + 8 }]}>
-          <Text style={s.headerTitle}>கணேசபுரம்</Text>
+          <View style={s.headerTextBlock}>
+            <Text style={s.headerOverline}>G ONE COMMUNITY</Text>
+            <Text style={s.headerTitle}>கணேசபுரம்</Text>
+          </View>
+          <LinearGradient colors={theme.gradients.accent as any} style={s.headerMark}>
+            <Text style={s.headerMarkText}>G</Text>
+          </LinearGradient>
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: SPACING.lg, marginBottom: SPACING.md }}>
-          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
+          <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
         </Animated.View>
 
         {/* Thirukural Card */}
         <Animated.View style={[s.cardWrap, { opacity: card1Anim, transform: [{ translateY: card1Anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}>
           <LinearGradient colors={theme.gradients.card as any} style={s.card}>
             <View style={s.cardInnerBorder}>
-              <LinearGradient colors={theme.gradients.gold as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
+              <LinearGradient colors={theme.gradients.accent as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
                 <Text style={s.badgeText}>✦ திருக்குறள் ✦</Text>
                 {kural && <Text style={s.badgeNum}>#{kural.number}</Text>}
               </LinearGradient>
 
               {kuralLoading ? (
-                <ActivityIndicator color={GOLD.primary} size="large" style={{ marginVertical: 32 }} />
+                <ActivityIndicator color={ACCENT.primary} size="large" style={{ marginVertical: 32 }} />
               ) : kural ? (
                 <View style={s.kuralBody}>
                   <Animated.Text style={[s.kuralLine, { transform: [{ scale: pulseAnim }] }]}>{kural.line1}</Animated.Text>
@@ -171,7 +177,7 @@ export default function HomeScreen() {
               ) : null}
 
               <TouchableOpacity onPress={loadKural} style={s.nextBtn} activeOpacity={0.85}>
-                <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.nextBtnInner}>
+                <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.nextBtnInner}>
                   <Text style={s.nextBtnText}>அடுத்த குறள் ✦</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -183,8 +189,8 @@ export default function HomeScreen() {
         <Animated.View style={[s.cardWrap, { opacity: card2Anim, transform: [{ translateY: card2Anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}>
           <LinearGradient colors={theme.gradients.card as any} style={s.card}>
             <View style={s.cardInnerBorder}>
-              <LinearGradient colors={isDark ? ['#0a2a4a', '#0d3b6e'] : ['#1565C0', '#1976D2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
-                <Text style={[s.badgeText, { color: '#fff' }]}>✦ வானிலை ✦</Text>
+              <LinearGradient colors={isDark ? [DEEP.deep, DEEP.primary] : [DEEP.primary, DEEP.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
+                <Text style={[s.badgeText, { color: SOFT_WHITE }]}>✦ வானிலை ✦</Text>
                 <TouchableOpacity
                   onPress={handleLocationPress}
                   activeOpacity={0.75}
@@ -197,7 +203,7 @@ export default function HomeScreen() {
               </LinearGradient>
 
               {weatherLoading ? (
-                <ActivityIndicator color={GOLD.primary} size="large" style={{ marginVertical: 32 }} />
+                <ActivityIndicator color={ACCENT.primary} size="large" style={{ marginVertical: 32 }} />
               ) : weather ? (
                 <View style={s.weatherBody}>
                   <View style={s.weatherRow}>
@@ -226,7 +232,7 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 32, marginBottom: 8 }}>🌤️</Text>
                   <Text style={[s.weatherRegion, { textAlign: 'center' }]}>வானிலை தகவல் கிடைக்கவில்லை</Text>
                   <TouchableOpacity onPress={() => loadWeather()} style={{ marginTop: 12 }}>
-                    <Text style={{ color: GOLD.primary, fontFamily: FONT_FAMILY.semibold }}>மீண்டும் முயற்சி</Text>
+                    <Text style={{ color: ACCENT.primary, fontFamily: FONT_FAMILY.semibold }}>மீண்டும் முயற்சி</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -235,7 +241,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', paddingBottom: SPACING.xl }}>
-          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
+          <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
           <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, letterSpacing: 1 }}>நன்றி. G One Mobile App Development Team ✦</Text>
         </Animated.View>
       </ScrollView>
@@ -248,7 +254,7 @@ function WeatherStat({ icon, label, value, theme }: any) {
     <View style={{ alignItems: 'center', marginBottom: 10 }}>
       <Text style={{ fontSize: 14 }}>{icon}</Text>
       <Text style={{ color: theme.textMuted, fontSize: 9, fontFamily: FONT_FAMILY.semibold, marginTop: 2 }}>{label}</Text>
-      <Text style={{ color: GOLD.light, fontSize: 13, fontFamily: FONT_FAMILY.bold }}>{value}</Text>
+      <Text style={{ color: ACCENT.light, fontSize: 13, fontFamily: FONT_FAMILY.bold }}>{value}</Text>
     </View>
   );
 }
@@ -257,34 +263,38 @@ const styles = (theme: any, isDark: boolean) => StyleSheet.create({
   root:            { flex: 1, backgroundColor: theme.background },
   scroll:          { flex: 1 },
   content:         { paddingBottom: SPACING.xxl },
-  header:          { paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: SPACING.md },
-  headerTitle:     { color: theme.text, fontSize: 30, fontFamily: FONT_FAMILY.black, letterSpacing: -0.5 },
+  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: SPACING.md },
+  headerTextBlock: { flex: 1, paddingRight: SPACING.md },
+  headerOverline:  { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 2.4, marginBottom: 6 },
+  headerTitle:     { color: theme.text, fontSize: width < 380 ? 28 : 34, fontFamily: FONT_FAMILY.black },
+  headerMark:      { width: 50, height: 50, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', ...SHADOWS.accent },
+  headerMarkText:  { color: ON_ACCENT, fontSize: 24, fontFamily: FONT_FAMILY.black },
   cardWrap:        { paddingHorizontal: SPACING.md, marginBottom: SPACING.md },
-  card:            { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 1, borderColor: GOLD.border, ...SHADOWS.gold },
+  card:            { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 1, borderColor: ACCENT.border, backgroundColor: theme.card, ...SHADOWS.card },
   cardInnerBorder: { margin: 1, borderRadius: RADIUS.xl - 1 },
-  badge:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 10 },
-  badgeText:       { color: '#1A0F00', fontSize: 13, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 1 },
-  badgeNum:        { color: 'rgba(26,15,0,0.55)', fontSize: 12, fontFamily: FONT_FAMILY.semibold },
-  kuralBody:       { padding: SPACING.md },
-  kuralLine:       { color: theme.text, fontSize: 19, fontFamily: FONT_FAMILY.extrabold, lineHeight: 32, textAlign: 'center', letterSpacing: 0.5, marginBottom: 4 },
-  chapterTag:      { alignSelf: 'center', backgroundColor: GOLD.subtle, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 4, marginTop: SPACING.sm, borderWidth: 1, borderColor: GOLD.border },
-  chapterText:     { color: GOLD.primary, fontSize: 11, fontFamily: FONT_FAMILY.bold },
-  translationBox:  { backgroundColor: isDark ? 'rgba(201,162,39,0.08)' : 'rgba(201,162,39,0.06)', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.sm, borderLeftWidth: 3, borderLeftColor: GOLD.primary },
-  translationLabel:{ color: GOLD.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, marginBottom: 4, letterSpacing: 0.5 },
+  badge:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12 },
+  badgeText:       { color: ON_ACCENT, fontSize: 13, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 1 },
+  badgeNum:        { color: 'rgba(6,19,28,0.58)', fontSize: 12, fontFamily: FONT_FAMILY.semibold },
+  kuralBody:       { padding: SPACING.lg, paddingBottom: SPACING.md },
+  kuralLine:       { color: theme.text, fontSize: width < 380 ? 18 : 20, fontFamily: FONT_FAMILY.extrabold, lineHeight: 34, textAlign: 'center', marginBottom: 4 },
+  chapterTag:      { alignSelf: 'center', backgroundColor: ACCENT.subtle, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 4, marginTop: SPACING.sm, borderWidth: 1, borderColor: ACCENT.border },
+  chapterText:     { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.bold },
+  translationBox:  { backgroundColor: isDark ? ACCENT.tintSoft : 'rgba(58,46,40,0.05)', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.md, borderLeftWidth: 3, borderLeftColor: ACCENT.primary },
+  translationLabel:{ color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, marginBottom: 4, letterSpacing: 0.5 },
   translationText: { color: theme.textSecondary, fontSize: 14, fontFamily: FONT_FAMILY.regular, lineHeight: 22, fontStyle: 'italic' },
   nextBtn:         { margin: SPACING.md, marginTop: 4, borderRadius: RADIUS.full, overflow: 'hidden' },
   nextBtnInner:    { paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.full },
-  nextBtnText:     { color: '#1A0F00', fontFamily: FONT_FAMILY.extrabold, fontSize: 14, letterSpacing: 0.5 },
+  nextBtnText:     { color: ON_ACCENT, fontFamily: FONT_FAMILY.extrabold, fontSize: 14, letterSpacing: 0.5 },
   locBtn:          { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   locBtnActive:    { backgroundColor: 'rgba(74,222,128,0.25)', borderColor: '#4ADE80' },
-  locBtnText:      { color: '#fff', fontSize: 11, fontFamily: FONT_FAMILY.bold },
-  weatherBody:     { padding: SPACING.md },
+  locBtnText:      { color: SOFT_WHITE, fontSize: 11, fontFamily: FONT_FAMILY.bold },
+  weatherBody:     { padding: SPACING.lg },
   weatherRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   weatherLoc:      { color: theme.text, fontSize: 14, fontFamily: FONT_FAMILY.bold },
   weatherRegion:   { color: theme.textMuted, fontSize: 12, fontFamily: FONT_FAMILY.regular, marginBottom: 4 },
-  weatherTemp:     { color: GOLD.light, fontSize: 56, fontFamily: FONT_FAMILY.black, lineHeight: 64 },
+  weatherTemp:     { color: ACCENT.light, fontSize: 60, fontFamily: FONT_FAMILY.black, lineHeight: 66 },
   weatherCond:     { color: theme.textSecondary, fontSize: 13, fontFamily: FONT_FAMILY.regular, marginTop: 2 },
   weatherStats:    { alignItems: 'center', paddingTop: 8 },
-  sunRow:          { flexDirection: 'row', justifyContent: 'space-around', marginTop: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: GOLD.border },
+  sunRow:          { flexDirection: 'row', justifyContent: 'space-around', marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: ACCENT.border },
   sunText:         { color: theme.textSecondary, fontSize: 11, fontFamily: FONT_FAMILY.semibold },
 });

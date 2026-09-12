@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: 'G One',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#C9A227',
+          lightColor: '#C7CDD9',
         });
       }
 
@@ -163,8 +163,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const projectId =
-        Constants.expoConfig?.extra?.eas?.projectId ?? '07ef6392-df4d-4474-8bb4-dcec0beb6cbf';
+      // Must come from the build config — a wrong id mints a token for a dead
+      // Expo project, which fails later at send time as DeviceNotRegistered.
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+      if (!projectId) {
+        fail(
+          'Push Token No Project Id',
+          'expoConfig.extra.eas.projectId is missing from the build',
+          '⚠️ EAS project id missing — rebuild required',
+        );
+        return;
+      }
 
       let token: string;
       try {

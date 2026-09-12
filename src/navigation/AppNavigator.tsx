@@ -4,7 +4,7 @@ import {
   Animated, ScrollView, Dimensions, Platform, BackHandler,
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
@@ -19,15 +19,15 @@ import {
   extractIcon,
   StoredNotification,
 } from '../context/NotificationContext';
-import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
+import { ACCENT, ON_ACCENT, SOFT_WHITE, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
 
 const { height } = Dimensions.get('window');
 
 // ── Single notification row ───────────────────────────────────────────────────
 function NotifRow({
-  item, index, isDark, theme, onTap,
+  item, index, theme, onTap,
 }: {
-  item: StoredNotification; index: number; isDark: boolean; theme: any;
+  item: StoredNotification; index: number; theme: any;
   onTap: () => void;
 }) {
   const anim  = useRef(new Animated.Value(0)).current;
@@ -59,22 +59,20 @@ function NotifRow({
         onPressOut={onPressOut}
       >
         <LinearGradient
-          colors={isDark
-            ? ['rgba(22,22,22,0.96)', 'rgba(16,16,16,0.93)']
-            : ['rgba(255,255,255,0.98)', 'rgba(248,248,250,0.96)']}
+          colors={theme.gradients.row as any}
           style={[
             np.row,
-            { borderLeftColor: isUnread ? GOLD.primary : (isDark ? '#2A2A2A' : '#D4B87A'),
+            { borderLeftColor: isUnread ? ACCENT.primary : theme.border,
               opacity: item.viewed ? 0.65 : 1 },
           ]}
         >
-          <View style={[np.iconBox, { backgroundColor: isUnread ? 'rgba(201,162,39,0.18)' : 'rgba(201,162,39,0.07)' }]}>
+          <View style={[np.iconBox, { backgroundColor: isUnread ? ACCENT.tintStrong : ACCENT.tintSoft }]}>
             <Text style={{ fontSize: 18 }}>{icon}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
               <Text
-                style={[np.rowTitle, { color: isUnread ? (isDark ? '#FFFFFF' : '#111111') : theme.textSecondary }]}
+                style={[np.rowTitle, { color: isUnread ? theme.text : theme.textSecondary }]}
                 numberOfLines={1}
               >
                 {cleanTitle}
@@ -134,28 +132,28 @@ function NotifPanel({ visible, onClose, isDark, theme }: {
 
       {/* Panel */}
       <Animated.View
-        style={[np.panel, { backgroundColor: isDark ? '#0C0C0C' : '#FFFFFF', transform: [{ translateY: slideY }] }]}
+        style={[np.panel, { backgroundColor: theme.background, transform: [{ translateY: slideY }] }]}
         pointerEvents="auto"
       >
-        {/* Top gold stripe */}
-        <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light, GOLD.primary, GOLD.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3 }} />
+        {/* Top accent stripe */}
+        <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3 }} />
 
         {/* Header */}
-        <LinearGradient colors={isDark ? ['#161616', '#0E0E0E'] : ['#FFFFFF', '#F8F8FA']} style={[np.header, { paddingTop: Math.max(insets.top + 8, 24) }]}>
+        <LinearGradient colors={theme.gradients.header as any} style={[np.header, { paddingTop: Math.max(insets.top + 8, 24) }]}>
           <View>
             <Text style={[np.title, { color: theme.text }]}>அறிவிப்புகள்</Text>
             <Text style={np.sub}>NOTIFICATIONS</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {unreadCount > 0 && (
-              <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={np.badge}>
+              <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={np.badge}>
                 <Text style={np.badgeText}>{unreadCount} புதியவை</Text>
               </LinearGradient>
             )}
             {/* Close button */}
             <TouchableOpacity onPress={onClose} activeOpacity={0.75} style={{ borderRadius: RADIUS.full, overflow: 'hidden' }}>
-              <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={np.closeBtn}>
-                <Text style={{ color: '#1A0F00', fontSize: 13, fontFamily: FONT_FAMILY.black }}>✕</Text>
+              <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={np.closeBtn}>
+                <Text style={{ color: ON_ACCENT, fontSize: 13, fontFamily: FONT_FAMILY.black }}>✕</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -163,10 +161,10 @@ function NotifPanel({ visible, onClose, isDark, theme }: {
 
         {/* Action row — mark all read + clear all */}
         {!isEmpty && (
-          <View style={[np.actionRow, { backgroundColor: isDark ? '#111111' : '#F8F8FA', borderBottomColor: GOLD.border }]}>
+          <View style={[np.actionRow, { backgroundColor: isDark ? '#101724' : '#E2E5EC', borderBottomColor: ACCENT.border }]}>
             {unreadCount > 0 && (
               <TouchableOpacity onPress={markAllViewed} activeOpacity={0.7} style={np.actionBtn}>
-                <Text style={[np.actionText, { color: GOLD.primary }]}>✓ அனைத்தும் படிக்கப்பட்டது</Text>
+                <Text style={[np.actionText, { color: ACCENT.primary }]}>✓ அனைத்தும் படிக்கப்பட்டது</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={clearAll} activeOpacity={0.7} style={np.actionBtn}>
@@ -175,7 +173,7 @@ function NotifPanel({ visible, onClose, isDark, theme }: {
           </View>
         )}
 
-        <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
+        <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
 
         {/* List */}
         <ScrollView
@@ -193,7 +191,6 @@ function NotifPanel({ visible, onClose, isDark, theme }: {
                 key={item.id}
                 item={item}
                 index={i}
-                isDark={isDark}
                 theme={theme}
                 onTap={() => markViewed(item.id)}
               />
@@ -208,49 +205,80 @@ function NotifPanel({ visible, onClose, isDark, theme }: {
 const np = StyleSheet.create({
   panel:      { position: 'absolute', top: 0, left: 0, right: 0, maxHeight: height * 0.78, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, overflow: 'hidden', elevation: 20 },
   header:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: SPACING.md },
-  title:      { fontSize: 22, fontFamily: FONT_FAMILY.black, letterSpacing: -0.3 },
-  sub:        { color: GOLD.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 2, marginTop: 2 },
+  title:      { fontSize: 22, fontFamily: FONT_FAMILY.black, letterSpacing: 0 },
+  sub:        { color: ACCENT.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 2, marginTop: 2 },
   badge:      { borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 5 },
-  badgeText:  { color: '#1A0F00', fontSize: 11, fontFamily: FONT_FAMILY.extrabold },
+  badgeText:  { color: ON_ACCENT, fontSize: 11, fontFamily: FONT_FAMILY.extrabold },
   closeBtn:   { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   actionRow:  { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: SPACING.md, paddingVertical: 10, borderBottomWidth: 1 },
   actionBtn:  { paddingVertical: 2, paddingHorizontal: 4 },
   actionText: { fontSize: 12, fontFamily: FONT_FAMILY.semibold },
-  row:        { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1, borderColor: GOLD.border, borderLeftWidth: 3, padding: SPACING.sm },
+  row:        { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1, borderColor: ACCENT.border, borderLeftWidth: 3, padding: SPACING.sm },
   iconBox:    { width: 36, height: 36, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   rowTitle:   { fontSize: 13, fontFamily: FONT_FAMILY.bold, flex: 1, marginRight: 6 },
-  rowTime:    { color: '#888888', fontSize: 10, fontFamily: FONT_FAMILY.medium, flexShrink: 0 },
+  rowTime:    { color: '#8A8F98', fontSize: 10, fontFamily: FONT_FAMILY.medium, flexShrink: 0 },
   rowBody:    { fontSize: 11, fontFamily: FONT_FAMILY.regular, lineHeight: 16 },
-  unreadDot:  { position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: GOLD.primary },
+  unreadDot:  { position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: ACCENT.primary },
   empty:      { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACING.xxl },
   emptyText:  { fontSize: 14, fontFamily: FONT_FAMILY.semibold, marginBottom: 8 },
   emptySubText:{ fontSize: 11, fontFamily: FONT_FAMILY.regular, textAlign: 'center', lineHeight: 17, paddingHorizontal: SPACING.md },
 });
 
-// ── Tab label ─────────────────────────────────────────────────────────────────
-function TabLabel({ label, color }: { label: string; color: string }) {
-  return (
-    <Text
-      numberOfLines={1}
-      allowFontScaling={false}
-      textBreakStrategy="simple"
-      style={{ fontSize: 11, fontFamily: FONT_FAMILY.bold, color, textAlign: 'center' }}
-    >
-      {label}
-    </Text>
-  );
-}
-
 const Tab = createBottomTabNavigator();
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return focused ? (
-    <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.tabActive}>
-      <Text style={ts.tabEmoji}>{emoji}</Text>
-    </LinearGradient>
-  ) : (
-    <View style={ts.tabInactive}>
-      <Text style={[ts.tabEmoji, { opacity: 0.5 }]}>{emoji}</Text>
+// ── Floating dock tab bar ───────────────────────────────────────────────────────
+// Replaces the old edge-to-edge docked bar: an inset, fully-rounded floating
+// pill. Inactive tabs show icon-only; the focused tab expands into an
+// icon+label capsule filled with the accent gradient.
+const TAB_META: Record<string, { emoji: string; label: string }> = {
+  Home: { emoji: '🏠', label: 'முகப்பு' },
+  Members: { emoji: '👥', label: 'உறுப்பினர்' },
+};
+
+function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+  const { theme } = useTheme();
+  const { isLoggedIn } = useAuth();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View
+      style={[
+        tb.wrap,
+        {
+          backgroundColor: theme.background,
+          paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + 10,
+        },
+      ]}
+    >
+      <View style={[tb.bar, { backgroundColor: theme.cardElevated, borderColor: ACCENT.border, ...SHADOWS.card }]}>
+        {state.routes.map((route, index) => {
+          const focused = state.index === index;
+          const meta = route.name === 'Profile'
+            ? { emoji: isLoggedIn ? '✅' : '👤', label: isLoggedIn ? 'சுயவிவரம்' : 'உள்நுழைவு' }
+            : TAB_META[route.name] ?? { emoji: '•', label: route.name };
+
+          const onPress = () => {
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+          };
+
+          return (
+            <TouchableOpacity key={route.key} onPress={onPress} activeOpacity={0.8} style={tb.item}>
+              {focused ? (
+                <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={tb.activePill}>
+                  <Text style={tb.emoji}>{meta.emoji}</Text>
+                  <Text style={tb.activeLabel} numberOfLines={1}>{meta.label}</Text>
+                </LinearGradient>
+              ) : (
+                <View style={tb.inactiveItem}>
+                  <Text style={[tb.emoji, { opacity: 0.5 }]}>{meta.emoji}</Text>
+                  {route.name === 'Profile' && isLoggedIn && <View style={tb.dot} />}
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -258,7 +286,6 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 // ── App navigator ─────────────────────────────────────────────────────────────
 export default function AppNavigator() {
   const { theme, isDark, toggleTheme } = useTheme();
-  const { isLoggedIn } = useAuth();
   const { unreadCount, pendingOpenPanel, clearPendingOpen } = useNotifications();
   const { refresh } = useRefreshContext();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -299,51 +326,12 @@ export default function AppNavigator() {
           screenListeners={({ route }) => ({
             focus: () => setActiveTab(route.name),
           })}
-          screenOptions={{
-            headerShown: false,
-            tabBarStyle: {
-              backgroundColor: theme.tabBar,
-              borderTopColor: GOLD.border,
-              borderTopWidth: 1,
-              height: 72 + Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0),
-              paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + 6,
-              paddingTop: 6,
-            },
-            tabBarActiveTintColor: GOLD.primary,
-            tabBarInactiveTintColor: theme.textMuted,
-          }}
+          screenOptions={{ headerShown: false }}
+          tabBar={(props) => <FloatingTabBar {...props} />}
         >
-          <Tab.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{
-              tabBarLabel: ({ color }) => <TabLabel label="முகப்பு" color={color} />,
-              tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
-            }}
-          />
-          <Tab.Screen
-            name="Members"
-            component={MembersScreen}
-            options={{
-              tabBarLabel: ({ color }) => <TabLabel label="உறுப்பினர்" color={color} />,
-              tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
-            }}
-          />
-          <Tab.Screen
-            name="Profile"
-            component={ProfileScreen}
-            options={{
-              tabBarLabel: ({ color }) => (
-                <TabLabel label={isLoggedIn ? 'சுயவிவரம்' : 'உள்நுழைவு'} color={color} />
-              ),
-              tabBarIcon: ({ focused }) => (
-                <View>
-                  <TabIcon emoji={isLoggedIn ? '✅' : '👤'} focused={focused} />
-                  {isLoggedIn && !focused && <View style={ts.dot} />}
-                </View>
-              ),
-            }}
-          />
+          <Tab.Screen name="Home" component={HomeScreen} />
+          <Tab.Screen name="Members" component={MembersScreen} />
+          <Tab.Screen name="Profile" component={ProfileScreen} />
         </Tab.Navigator>
       </NavigationContainer>
 
@@ -352,7 +340,7 @@ export default function AppNavigator() {
         <Animated.View style={{ opacity: notifOpen ? 0 : 1, gap: 12 }}>
           {/* Notification bell */}
           <TouchableOpacity onPress={() => setNotifOpen(true)} activeOpacity={0.8} style={ts.fabBtn}>
-            <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.fabBtnInner}>
+            <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={ts.fabBtnInner}>
               <Text style={ts.fabIcon}>🔔</Text>
             </LinearGradient>
             {unreadCount > 0 && (
@@ -364,7 +352,7 @@ export default function AppNavigator() {
 
           {/* Reload current page */}
           <TouchableOpacity onPress={handleReload} activeOpacity={0.8} style={ts.fabBtn}>
-            <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.fabBtnInner}>
+            <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={ts.fabBtnInner}>
               <Animated.Text style={[ts.fabReloadIcon, { transform: [{ rotate: reloadAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>
                 ↻
               </Animated.Text>
@@ -373,7 +361,7 @@ export default function AppNavigator() {
 
           {/* Dark / light toggle */}
           <TouchableOpacity onPress={toggleTheme} activeOpacity={0.8} style={ts.fabBtn}>
-            <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={ts.fabBtnInner}>
+            <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={ts.fabBtnInner}>
               <Text style={ts.fabIcon}>{isDark ? '☀️' : '🌙'}</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -386,16 +374,24 @@ export default function AppNavigator() {
 }
 
 const ts = StyleSheet.create({
-  tabActive:      { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  tabInactive:    { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  tabEmoji:       { fontSize: 22 },
-  dot:            { position: 'absolute', top: 0, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
   fab:            { position: 'absolute', top: 52, right: 14, zIndex: 100, elevation: 20 },
-  fabBtn:         { borderRadius: RADIUS.full, ...SHADOWS.gold },
-  fabBtnInner:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  fabBtn:         { borderRadius: RADIUS.full, ...SHADOWS.accent },
+  fabBtnInner:    { width: 42, height: 42, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: ACCENT.border },
   fabIcon:        { fontSize: 18 },
-  fabReloadIcon:  { fontSize: 24, color: '#1A0F00', fontWeight: '900', lineHeight: 28 },
+  fabReloadIcon:  { fontSize: 24, color: ON_ACCENT, fontWeight: '900', lineHeight: 28 },
   notifBadge:     { position: 'absolute', top: -3, right: -3, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   notifBadgeText: { color: '#fff', fontSize: 9, fontFamily: FONT_FAMILY.extrabold },
   errorPulse:     { position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: '#EF4444', borderWidth: 1.5, borderColor: '#fff' },
 });
+
+const tb = StyleSheet.create({
+  wrap:          { paddingHorizontal: SPACING.lg, paddingTop: 10 },
+  bar:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: RADIUS.full, borderWidth: 1, paddingVertical: 8, paddingHorizontal: 8 },
+  item:          { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  activePill:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 16, borderRadius: RADIUS.full },
+  inactiveItem:  { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  emoji:         { fontSize: 18 },
+  activeLabel:   { fontSize: 12, fontFamily: FONT_FAMILY.bold, color: ON_ACCENT },
+  dot:           { position: 'absolute', top: 2, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
+});
+

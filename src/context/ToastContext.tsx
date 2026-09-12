@@ -2,7 +2,7 @@ import React, {
   createContext, useContext, useState, useRef, useEffect, useCallback,
 } from 'react';
 import { Animated, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { GOLD, SPACING, RADIUS } from '../theme';
+import { ACCENT, SPACING, RADIUS } from '../theme';
 
 export type ToastType = 'error' | 'info' | 'success';
 
@@ -37,8 +37,8 @@ function ToastBubble({ message, type, onDone }: {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
-  const borderColor = type === 'error' ? '#EF4444' : type === 'success' ? '#4ADE80' : GOLD.primary;
-  const bgColor     = type === 'error' ? 'rgba(40,8,8,0.97)' : type === 'success' ? 'rgba(8,30,12,0.97)' : 'rgba(20,14,3,0.97)';
+  const borderColor = type === 'error' ? '#EF4444' : type === 'success' ? '#4ADE80' : ACCENT.primary;
+  const bgColor     = type === 'error' ? 'rgba(40,8,8,0.97)' : type === 'success' ? 'rgba(8,30,12,0.97)' : 'rgba(28,25,23,0.97)';
   const icon        = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
 
   return (
