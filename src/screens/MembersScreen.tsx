@@ -1,22 +1,17 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Animated, Image, TextInput, Dimensions,
+  ActivityIndicator, Animated, Image, TextInput,
   RefreshControl, Linking,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useRefreshContext } from '../context/RefreshContext';
-import { ACCENT, ON_ACCENT, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
-import { fetchMemberList, logError } from '../api';
-import StarBackground from '../components/StarBackground';
-
-const { width } = Dimensions.get('window');
-const BASE_URL = 'https://ganesapuram-mobile-app-server.vercel.app/';
+import { ACCENT, SPACING, RADIUS, TYPE, FONT_FAMILY } from '../theme';
+import { fetchMemberList, imageUrl, logError } from '../api';
 
 interface Member {
   id: string; name: string; email?: string;
@@ -26,7 +21,7 @@ interface Member {
 }
 
 const ONLINE_WINDOW_MS = 2 * 60 * 1000; // heartbeat is 60s — within 2 min counts as online
-const ONLINE_GREEN = '#4ADE80';
+const ONLINE_GREEN = '#34D399';
 
 function presenceInfo(lastSeen: string | null | undefined, now: number): { online: boolean; label: string } | null {
   if (!lastSeen) return null;
@@ -34,127 +29,76 @@ function presenceInfo(lastSeen: string | null | undefined, now: number): { onlin
   if (Number.isNaN(diff) || diff < 0) return null;
   if (diff < ONLINE_WINDOW_MS) return { online: true, label: 'Online' };
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return { online: false, label: `${mins}m ago` };
+  if (mins < 60) return { online: false, label: `${mins}m` };
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return { online: false, label: `${hours}h ago` };
+  if (hours < 24) return { online: false, label: `${hours}h` };
   const days = Math.floor(hours / 24);
-  if (days <= 30) return { online: false, label: `${days}d ago` };
+  if (days <= 30) return { online: false, label: `${days}d` };
   return null; // last seen over a month ago — show nothing
 }
 
-function MemberCard({ member, index, showDeptPos, now }: { member: Member; index: number; showDeptPos: boolean; now: number }) {
-  const { theme, isDark } = useTheme();
-  const anim     = useRef(new Animated.Value(0)).current;
-  const pressAnim = useRef(new Animated.Value(1)).current;
+function MemberRow({ member, showDeptPos, now }: { member: Member; showDeptPos: boolean; now: number }) {
+  const { theme } = useTheme();
   const [imgError, setImgError] = useState(false);
 
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1, duration: 400,
-      delay: (index % 12) * 50,
-      useNativeDriver: true,
-    }).start();
-  }, [index]);
-
-  const onPressIn  = () => Animated.spring(pressAnim, { toValue: 0.97, useNativeDriver: true }).start();
-  const onPressOut = () => Animated.spring(pressAnim, { toValue: 1,    useNativeDriver: true }).start();
-
   const imageUri = member.contentVersionId && !imgError
-    ? `${BASE_URL}/api/member/image/${member.contentVersionId}` : null;
+    ? imageUrl(member.contentVersionId) : null;
 
   const initials = member.name
     ? member.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() : '?';
 
-  const handleCall = () => {
-    if (member.phone) Linking.openURL(`tel:${member.phone}`);
-  };
-
   const presence = presenceInfo(member.lastSeen, now);
-  const s = cardStyles(theme, isDark);
+  const s = rowStyles(theme);
+
+  // Build one subtitle line instead of stacking four muted rows.
+  const subtitle = [
+    showDeptPos ? member.position : null,
+    showDeptPos ? member.department : null,
+    member.work,
+    member.location,
+  ].filter(Boolean).join(' · ');
 
   return (
-    <Animated.View style={{
-      opacity: anim,
-      transform: [
-        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) },
-        { scale: pressAnim },
-      ],
-      marginBottom: SPACING.sm,
-    }}>
-      <TouchableOpacity activeOpacity={0.9} onPressIn={onPressIn} onPressOut={onPressOut}>
-        <LinearGradient colors={theme.gradients.card as any} style={s.card}>
-          {/* Gold left accent bar */}
-          <LinearGradient
-            colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]}
-            start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-            style={s.leftBar}
-          />
-
-          {/* Avatar */}
-          <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={s.avatarRing}>
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} style={s.avatar} onError={() => setImgError(true)} />
-            ) : (
-              <LinearGradient
-                colors={theme.gradients.avatar as any}
-                style={s.avatarFallback}
-              >
-                <Text style={s.initials}>{initials}</Text>
-              </LinearGradient>
-            )}
-            {presence?.online ? <View style={s.onlineBadge} /> : null}
-          </LinearGradient>
-
-          {/* Info */}
-          <View style={s.info}>
-            <View style={s.nameRow}>
-              <Text style={s.name} numberOfLines={1}>{member.name}</Text>
-              {presence ? (
-                <View style={s.presenceTag}>
-                  <View style={[s.presenceDot, presence.online && { backgroundColor: ONLINE_GREEN }]} />
-                  <Text style={[s.presenceText, presence.online && { color: ONLINE_GREEN }]}>{presence.label}</Text>
-                </View>
-              ) : null}
-            </View>
-
-            {showDeptPos && member.position ? (
-              <View style={s.posTag}>
-                <Text style={s.posText} numberOfLines={1}>✦ {member.position}</Text>
-              </View>
-            ) : null}
-
-            <View style={s.metaRow}>
-              {showDeptPos && member.department ? (
-                <Text style={s.meta} numberOfLines={1}>{member.department}</Text>
-              ) : null}
-            </View>
-            {member.work ? (
-              <Text style={s.metaExtra} numberOfLines={1}>💼 {member.work}</Text>
-            ) : null}
-            {member.location ? (
-              <Text style={s.metaExtra} numberOfLines={1}>📍 {member.location}</Text>
-            ) : null}
+    <View style={s.row}>
+      <View>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={s.avatar} onError={() => setImgError(true)} />
+        ) : (
+          <View style={[s.avatar, s.avatarFallback]}>
+            <Text style={s.initials}>{initials}</Text>
           </View>
+        )}
+        {presence?.online && <View style={s.onlineDot} />}
+      </View>
 
-          {/* Call button */}
-          {member.phone ? (
-            <TouchableOpacity onPress={handleCall} activeOpacity={0.75} style={s.callBtn}>
-              <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={s.callBtnInner}>
-                <Text style={s.callIcon}>📞</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          ) : null}
-        </LinearGradient>
-      </TouchableOpacity>
-    </Animated.View>
+      <View style={s.info}>
+        <View style={s.nameRow}>
+          <Text style={s.name} numberOfLines={1}>{member.name}</Text>
+          {presence && !presence.online && (
+            <Text style={s.ago}>{presence.label}</Text>
+          )}
+        </View>
+        {subtitle ? <Text style={s.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+      </View>
+
+      {member.phone ? (
+        <TouchableOpacity
+          onPress={() => Linking.openURL(`tel:${member.phone}`)}
+          activeOpacity={0.6}
+          style={s.callBtn}
+          hitSlop={8}
+        >
+          <Ionicons name="call-outline" size={18} color={ACCENT.primary} />
+        </TouchableOpacity>
+      ) : null}
+    </View>
   );
 }
 
 export default function MembersScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { member: authMember, isLoggedIn } = useAuth();
   const { register, unregister } = useRefreshContext();
-  const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const isUPR = isLoggedIn && authMember?.type === 'UPR';
 
@@ -166,14 +110,10 @@ export default function MembersScreen() {
   const [error,    setError]    = useState('');
   const [now,      setNow]      = useState(Date.now());
 
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, tension: 35, friction: 8, useNativeDriver: true }),
-    ]).start();
+    Animated.timing(fade, { toValue: 1, duration: 350, useNativeDriver: true }).start();
   }, []);
 
   const load = useCallback(async () => {
@@ -192,7 +132,7 @@ export default function MembersScreen() {
   useEffect(() => { load(); }, []);
 
   // Presence polling — while this screen is focused, silently refresh lastSeen
-  // every 60s and tick the clock every 30s so "Xm ago" labels stay current.
+  // every 60s and tick the clock every 30s so the "Xm" labels stay current.
   useEffect(() => {
     if (!isFocused) return;
     const tick = setInterval(() => setNow(Date.now()), 30 * 1000);
@@ -233,112 +173,102 @@ export default function MembersScreen() {
     setFiltered(list);
   }, [search, members, isUPR]);
 
-  const s = styles(theme, isDark);
+  const s = styles(theme);
 
   return (
     <View style={s.root}>
       <StatusBar style={theme.statusBar} />
-      <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
-      <StarBackground />
 
-      {/* Header */}
-      <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <LinearGradient colors={theme.gradients.header as any} style={[s.headerBg, { paddingTop: Math.max(insets.top, 28) + 8 }]}>
-          <View style={s.headerInner}>
-            <Text style={s.headerTitle}>உறுப்பினர்கள்</Text>
-            <Text style={s.headerCount}>{members.length} பேர்</Text>
-          </View>
-          <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginBottom: SPACING.sm }} />
-          <View style={s.searchWrap}>
-            <Text style={{ color: ACCENT.primary, marginRight: 8, fontSize: 16 }}>🔍</Text>
-            <TextInput
-              style={s.searchInput} placeholder="தேடுங்கள்..." placeholderTextColor={theme.textMuted}
-              value={search} onChangeText={setSearch} autoCapitalize="none" autoCorrect={false}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <Text style={{ color: ACCENT.primary, fontSize: 16, paddingLeft: 8 }}>✕</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </LinearGradient>
-      </Animated.View>
+      <View style={s.searchBar}>
+        <Ionicons name="search-outline" size={17} color={theme.textMuted} />
+        <TextInput
+          style={s.searchInput}
+          placeholder="தேடுங்கள்"
+          placeholderTextColor={theme.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} hitSlop={8} activeOpacity={0.6}>
+            <Ionicons name="close-circle" size={17} color={theme.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
 
       {loading ? (
         <View style={s.center}>
-          <ActivityIndicator color={ACCENT.primary} size="large" />
-          <Text style={[s.infoText, { marginTop: 12 }]}>Spinning...</Text>
+          <ActivityIndicator color={ACCENT.primary} />
         </View>
       ) : error ? (
         <View style={s.center}>
-          <Text style={{ fontSize: 48, marginBottom: 12 }}>🌐</Text>
+          <Ionicons name="cloud-offline-outline" size={34} color={theme.textMuted} />
           <Text style={s.infoText}>{error}</Text>
-          <TouchableOpacity onPress={() => { setLoading(true); load(); }} style={s.retryBtn}>
-            <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={s.retryBtnInner}>
-              <Text style={{ color: ON_ACCENT, fontFamily: FONT_FAMILY.extrabold }}>மீண்டும் முயற்சி</Text>
-            </LinearGradient>
+          <TouchableOpacity onPress={() => { setLoading(true); load(); }} activeOpacity={0.6}>
+            <Text style={s.retry}>மீண்டும் முயற்சி</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={item => item.id}
-          contentContainerStyle={s.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />}
-          ListEmptyComponent={
-            <View style={s.center}>
-              <Text style={{ fontSize: 48, marginBottom: 8 }}>👥</Text>
-              <Text style={s.infoText}>"{search}" - தேடல் முடிவு இல்லை</Text>
-            </View>
-          }
-          renderItem={({ item, index }) => <MemberCard member={item} index={index} showDeptPos={isUPR} now={now} />}
-        />
+        <Animated.View style={{ flex: 1, opacity: fade }}>
+          <FlatList
+            data={filtered}
+            keyExtractor={item => item.id}
+            contentContainerStyle={s.listContent}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={s.sep} />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />}
+            ListHeaderComponent={
+              <Text style={s.count}>{filtered.length} பேர்</Text>
+            }
+            ListEmptyComponent={
+              <View style={s.center}>
+                <Ionicons name="people-outline" size={34} color={theme.textMuted} />
+                <Text style={s.infoText}>தேடல் முடிவு இல்லை</Text>
+              </View>
+            }
+            renderItem={({ item }) => <MemberRow member={item} showDeptPos={isUPR} now={now} />}
+          />
+        </Animated.View>
       )}
     </View>
   );
 }
 
-const cardStyles = (theme: any, isDark: boolean) => StyleSheet.create({
-  card: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: RADIUS.xl, borderWidth: 1, borderColor: ACCENT.border,
-    backgroundColor: theme.card, overflow: 'hidden', minHeight: 92, ...SHADOWS.card,
+const rowStyles = (theme: any) => StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingVertical: 12 },
+  avatar: { width: 46, height: 46, borderRadius: 23 },
+  avatarFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT.tintSoft },
+  initials: { ...TYPE.bodyStrong, color: ACCENT.primary },
+  onlineDot: {
+    position: 'absolute', bottom: 0, right: 0, width: 13, height: 13, borderRadius: 7,
+    backgroundColor: ONLINE_GREEN, borderWidth: 2, borderColor: theme.background,
   },
-  leftBar:      { width: 4, alignSelf: 'stretch' },
-  avatarRing:   { padding: 2.5, borderRadius: 10, marginHorizontal: SPACING.md, flexShrink: 0 },
-  avatar:       { width: 58, height: 58, borderRadius: 8 },
-  avatarFallback: { width: 58, height: 58, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  initials:     { color: ACCENT.primary, fontSize: 18, fontFamily: FONT_FAMILY.black },
-  onlineBadge:  { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 7, backgroundColor: ONLINE_GREEN, borderWidth: 2, borderColor: theme.surface },
-  info:         { flex: 1, paddingVertical: SPACING.md, paddingRight: SPACING.sm },
-  nameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  name:         { color: theme.text, fontSize: 15, fontFamily: FONT_FAMILY.extrabold, flexShrink: 1 },
-  presenceTag:  { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
-  presenceDot:  { width: 7, height: 7, borderRadius: 3.5, backgroundColor: theme.textMuted },
-  presenceText: { color: theme.textMuted, fontSize: 10, fontFamily: FONT_FAMILY.medium },
-  posTag:       { alignSelf: 'flex-start', backgroundColor: ACCENT.subtle, borderRadius: RADIUS.full, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 1, borderColor: ACCENT.border, marginBottom: 4 },
-  posText:      { color: ACCENT.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.3 },
-  metaRow:      { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  meta:         { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium },
-  metaExtra:    { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, marginTop: 2 },
-  callBtn:      { marginRight: SPACING.md, flexShrink: 0 },
-  callBtnInner: { width: 42, height: 42, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
-  callIcon:     { fontSize: 18 },
+  info: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  name: { ...TYPE.bodyStrong, color: theme.text, flexShrink: 1 },
+  ago: { ...TYPE.caption, color: theme.textMuted, flexShrink: 0 },
+  subtitle: { ...TYPE.caption, color: theme.textMuted, marginTop: 2 },
+  callBtn: {
+    width: 38, height: 38, borderRadius: RADIUS.full,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: ACCENT.tintSoft,
+  },
 });
 
-const styles = (theme: any, isDark: boolean) => StyleSheet.create({
-  root:        { flex: 1, backgroundColor: theme.background },
-  header:      { zIndex: 10 },
-  headerBg:    { paddingTop: 50, paddingHorizontal: SPACING.md, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: ACCENT.border },
-  headerInner: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: SPACING.sm },
-  headerTitle: { color: theme.text, fontSize: 26, fontFamily: FONT_FAMILY.black },
-  headerCount: { color: theme.textMuted, fontSize: 12, fontFamily: FONT_FAMILY.medium },
-  searchWrap:  { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(248,250,252,0.82)', borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 11, marginBottom: SPACING.md, borderWidth: 1, borderColor: ACCENT.border, ...SHADOWS.card },
-  searchInput: { flex: 1, color: theme.text, fontSize: 14, fontFamily: FONT_FAMILY.regular },
-  listContent: { padding: SPACING.md, paddingBottom: 100 },
-  center:      { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
-  infoText:    { color: theme.textSecondary, fontSize: 14, fontFamily: FONT_FAMILY.regular, textAlign: 'center' },
-  retryBtn:    { marginTop: SPACING.md, borderRadius: RADIUS.full, overflow: 'hidden' },
-  retryBtnInner: { paddingVertical: 12, paddingHorizontal: 28, borderRadius: RADIUS.full },
+const styles = (theme: any) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: theme.background },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: SPACING.md, marginBottom: SPACING.sm,
+    paddingHorizontal: 14, paddingVertical: 11,
+    backgroundColor: theme.surface, borderRadius: RADIUS.md,
+  },
+  searchInput: { flex: 1, color: theme.text, ...TYPE.body, paddingVertical: 0 },
+  listContent: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.xl },
+  sep: { height: StyleSheet.hairlineWidth, backgroundColor: theme.divider, marginLeft: 58 },
+  count: { ...TYPE.caption, color: theme.textMuted, paddingBottom: SPACING.xs },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl, gap: 10 },
+  infoText: { ...TYPE.label, color: theme.textSecondary, textAlign: 'center' },
+  retry: { ...TYPE.bodyStrong, color: ACCENT.primary, marginTop: 4 },
 });

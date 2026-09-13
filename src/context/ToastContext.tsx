@@ -38,7 +38,7 @@ function ToastBubble({ message, type, onDone }: {
   }, []);
 
   const borderColor = type === 'error' ? '#EF4444' : type === 'success' ? '#4ADE80' : ACCENT.primary;
-  const bgColor     = type === 'error' ? 'rgba(40,8,8,0.97)' : type === 'success' ? 'rgba(8,30,12,0.97)' : 'rgba(28,25,23,0.97)';
+  const bgColor     = type === 'error' ? 'rgba(40,8,8,0.97)' : type === 'success' ? 'rgba(8,30,12,0.97)' : 'rgba(17,24,39,0.97)';
   const icon        = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
 
   return (

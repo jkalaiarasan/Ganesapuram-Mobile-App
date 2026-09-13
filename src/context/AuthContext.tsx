@@ -57,7 +57,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data) return;
 
       const parsed = JSON.parse(data);
-      const required = ['contentVersionId', 'work', 'location', 'dateOfBirth', 'phone'];
+      // 'type' gates UPR-only sections. A session cached before it was added
+      // restores without it, which silently demotes a UPR member — so treat a
+      // missing key as a stale session and make them sign in again.
+      const required = ['contentVersionId', 'work', 'location', 'dateOfBirth', 'phone', 'type'];
       if (required.some(k => !(k in parsed))) {
         await AsyncStorage.multiRemove([STORAGE_KEY, SESSION_TOKEN_KEY]);
         return;
@@ -144,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: 'G One',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#C7CDD9',
+          lightColor: '#0EA5E9',
         });
       }
 

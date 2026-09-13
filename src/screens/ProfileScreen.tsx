@@ -2,21 +2,19 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ActivityIndicator, Animated, KeyboardAvoidingView, Platform,
-  ScrollView, Image, Linking, Dimensions, RefreshControl,
+  ScrollView, Image, Linking, RefreshControl,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useRefreshContext } from '../context/RefreshContext';
-import { ACCENT, ON_ACCENT, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
-import { requestOtp, verifyOtp, logError } from '../api';
-import StarBackground from '../components/StarBackground';
+import ScreenHeader from '../components/ScreenHeader';
+import { ACCENT, SPACING, RADIUS, TYPE, FONT_FAMILY } from '../theme';
+import { requestOtp, verifyOtp, imageUrl, logError } from '../api';
 
-const { width } = Dimensions.get('window');
-const BASE_URL = 'https://ganesapuram-mobile-app-server.vercel.app/';
+const DANGER = '#F87171';
 
 type LoginStep = 'email' | 'otp';
 
@@ -30,34 +28,17 @@ function formatDOB(raw: string | null): string {
 }
 
 // ── OTP digit boxes ───────────────────────────────────────────────────────────
-function OtpBoxes({ value, onChange, theme, isDark }: {
-  value: string; onChange: (v: string) => void; theme: any; isDark: boolean;
+function OtpBoxes({ value, onChange, theme }: {
+  value: string; onChange: (v: string) => void; theme: any;
 }) {
-  const digits      = Array.from({ length: 6 }, (_, i) => value[i] || '');
-  const inputRef    = useRef<TextInput>(null);
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] || '');
+  const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
-  const cursorAnim  = useRef(new Animated.Value(1)).current;
 
-  // Auto-focus keyboard when OTP step mounts
   useEffect(() => {
-    const t = setTimeout(() => inputRef.current?.focus(), 400);
+    const t = setTimeout(() => inputRef.current?.focus(), 350);
     return () => clearTimeout(t);
   }, []);
-
-  useEffect(() => {
-    if (focused) {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(cursorAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
-          Animated.timing(cursorAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        ])
-      );
-      loop.start();
-      return () => loop.stop();
-    } else {
-      cursorAnim.setValue(1);
-    }
-  }, [focused]);
 
   const activeIndex = Math.min(value.length, 5);
 
@@ -67,52 +48,20 @@ function OtpBoxes({ value, onChange, theme, isDark }: {
         {digits.map((d, i) => {
           const isFilled = !!d;
           const isActive = focused && i === activeIndex && !isFilled;
-
           return (
-            <View key={i} style={{ position: 'relative' }}>
-              {isActive && (
-                <Animated.View style={{
-                  position: 'absolute', inset: -3,
-                  borderRadius: RADIUS.md + 3,
-                  borderWidth: 2,
-                  borderColor: ACCENT.primary,
-                  opacity: cursorAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
-                  shadowColor: ACCENT.primary,
-                  shadowOpacity: 0.9,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 0 },
-                  elevation: 6,
-                }} />
-              )}
-
-              <LinearGradient
-                colors={
-                  isFilled
-                    ? [ACCENT.dark, ACCENT.primary]
-                    : isActive
-                      ? [ACCENT.tintStrong, ACCENT.tintSoft]
-                      : (isDark ? ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)'] : ['rgba(0,0,0,0.04)', 'rgba(0,0,0,0.02)'])
-                }
-                style={{
-                  width: 44, height: 52, borderRadius: RADIUS.md,
-                  borderWidth: isActive ? 1.5 : isFilled ? 0 : 1,
-                  borderColor: isActive ? ACCENT.primary : ACCENT.border,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {isFilled ? (
-                  <Text style={{ color: ON_ACCENT, fontSize: 22, fontFamily: FONT_FAMILY.black }}>{d}</Text>
-                ) : isActive ? (
-                  <Animated.View style={{
-                    width: 2, height: 24, borderRadius: 1,
-                    backgroundColor: ACCENT.primary,
-                    opacity: cursorAnim,
-                  }} />
-                ) : (
-                  <Text style={{ color: ACCENT.border, fontSize: 10, fontFamily: FONT_FAMILY.black, opacity: 0.5 }}>•</Text>
-                )}
-              </LinearGradient>
+            <View
+              key={i}
+              style={{
+                width: 46, height: 54, borderRadius: RADIUS.sm,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: isFilled ? ACCENT.tintSoft : theme.surface,
+                borderWidth: 1.5,
+                borderColor: isActive ? ACCENT.primary : isFilled ? ACCENT.border : 'transparent',
+              }}
+            >
+              <Text style={{ fontSize: 21, fontFamily: FONT_FAMILY.semibold, color: isFilled ? theme.text : theme.textMuted }}>
+                {d || ''}
+              </Text>
             </View>
           );
         })}
@@ -132,59 +81,11 @@ function OtpBoxes({ value, onChange, theme, isDark }: {
   );
 }
 
-// ── InfoRow ───────────────────────────────────────────────────────────────────
-function InfoRow({ row, index, theme, isDark }: {
-  row: { icon: string; label: string; value: string; type: string };
-  index: number; theme: any; isDark: boolean;
-}) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(anim, { toValue: 1, duration: 400, delay: index * 70, useNativeDriver: true }).start();
-  }, []);
-
-  const isPhone = row.type === 'phone';
-  const handleCall = () =>
-    Linking.openURL(`tel:${row.value}`).catch(() => {});
-
-  const card = (
-    <LinearGradient colors={theme.gradients.card as any} style={IS.row}>
-      <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={IS.bar} />
-      <Text style={IS.icon}>{row.icon}</Text>
-      <View style={{ flex: 1 }}>
-        <Text style={IS.label}>{row.label}</Text>
-        <Text style={[IS.value, { color: isPhone ? ACCENT.light : theme.text }]} numberOfLines={2}>{row.value}</Text>
-      </View>
-      {isPhone && (
-        <View style={IS.callChip}>
-          <Text style={IS.callChipText}>அழை</Text>
-        </View>
-      )}
-    </LinearGradient>
-  );
-
-  return (
-    <Animated.View style={{ opacity: anim, transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }], marginBottom: SPACING.sm }}>
-      {isPhone ? <TouchableOpacity onPress={handleCall} activeOpacity={0.8}>{card}</TouchableOpacity> : card}
-    </Animated.View>
-  );
-}
-
-const IS = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: ACCENT.border, overflow: 'hidden', minHeight: 68, ...SHADOWS.card },
-  bar: { width: 4, alignSelf: 'stretch' },
-  icon: { fontSize: 22, marginHorizontal: SPACING.md },
-  label: { color: ACCENT.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.5, marginBottom: 3 },
-  value: { fontSize: 15, fontFamily: FONT_FAMILY.semibold, lineHeight: 20 },
-  callChip: { backgroundColor: ACCENT.primary, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 5, marginRight: SPACING.sm },
-  callChipText: { color: ON_ACCENT, fontSize: 11, fontFamily: FONT_FAMILY.extrabold },
-});
-
 // ── Main screen ───────────────────────────────────────────────────────────────
-export default function ProfileScreen() {
-  const { theme, isDark } = useTheme();
+export default function ProfileScreen({ navigation }: any) {
+  const { theme } = useTheme();
   const { member, login, logout, refreshMember } = useAuth();
   const { register, unregister } = useRefreshContext();
-  const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -210,27 +111,15 @@ export default function ProfileScreen() {
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fadeAnim   = useRef(new Animated.Value(0)).current;
-  const slideAnim  = useRef(new Animated.Value(40)).current;
-  const pulseAnim  = useRef(new Animated.Value(1)).current;
-  const scaleAnim  = useRef(new Animated.Value(member ? 1 : 0.6)).current;
+  const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, tension: 35, friction: 8, useNativeDriver: true }),
-    ]).start();
-    Animated.loop(Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.06, duration: 2000, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1,    duration: 2000, useNativeDriver: true }),
-    ])).start();
+    Animated.timing(fade, { toValue: 1, duration: 350, useNativeDriver: true }).start();
   }, []);
 
   useEffect(() => {
     if (member) {
       setImgError(false);
-      scaleAnim.setValue(0.6);
-      Animated.spring(scaleAnim, { toValue: 1, tension: 40, friction: 7, useNativeDriver: true }).start();
     } else {
       setLoginStep('email');
       setEmail('');
@@ -252,7 +141,6 @@ export default function ProfileScreen() {
     }, 1000);
   };
 
-  // Start countdown whenever OTP step becomes active
   useEffect(() => {
     if (loginStep === 'otp') startResendCountdown();
     return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
@@ -335,89 +223,73 @@ export default function ProfileScreen() {
     logout();
   };
 
-  const s = styles(theme, isDark);
+  const s = styles(theme);
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PROFILE VIEW
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Signed in ───────────────────────────────────────────────────────────────
   if (member) {
     const imageUri = member.contentVersionId && !imgError
-      ? `${BASE_URL}/api/member/image/${member.contentVersionId}` : null;
+      ? imageUrl(member.contentVersionId) : null;
 
     const initials = member.name
       ? member.name.trim().split(/\s+/).slice(0, 2).map(n => n[0]?.toUpperCase()).join('') : '?';
 
-    const infoRows = [
-      member.phone       && { icon: '📞', label: 'தொலைபேசி',      value: member.phone,                  type: 'phone' },
-      member.email       && { icon: '📧', label: 'மின்னஞ்சல்',    value: member.email,                  type: 'text'  },
-      member.dateOfBirth && { icon: '🎂', label: 'பிறந்த நாள்',   value: formatDOB(member.dateOfBirth), type: 'text'  },
-      member.work        && { icon: '💼', label: 'தொழில்',         value: member.work,                   type: 'text'  },
-      member.location    && { icon: '📍', label: 'இடம்',           value: member.location,               type: 'text'  },
-    ].filter(Boolean) as Array<{ icon: string; label: string; value: string; type: string }>;
+    const rows = [
+      member.phone       && { icon: 'call-outline',     label: 'தொலைபேசி',   value: member.phone,                  phone: true },
+      member.email       && { icon: 'mail-outline',     label: 'மின்னஞ்சல்', value: member.email },
+      member.dateOfBirth && { icon: 'gift-outline',     label: 'பிறந்த நாள்', value: formatDOB(member.dateOfBirth) },
+      member.work        && { icon: 'briefcase-outline',label: 'தொழில்',      value: member.work },
+      member.location    && { icon: 'location-outline', label: 'இடம்',        value: member.location },
+    ].filter(Boolean) as Array<{ icon: any; label: string; value: string; phone?: boolean }>;
 
     return (
       <View style={s.root}>
         <StatusBar style={theme.statusBar} />
-        <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
-        <StarBackground />
-
+        <ScreenHeader title="சுயவிவரம்" onBack={() => navigation.goBack()} />
         <ScrollView
-          contentContainerStyle={s.profileScroll}
+          contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />}
         >
+          <Animated.View style={{ opacity: fade }}>
 
-          {/* ── Hero ── */}
-          <LinearGradient
-            colors={theme.gradients.header as any}
-            style={s.heroBanner}
-          >
-            <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 2, width: '100%' }} />
+            {/* Identity */}
+            <View style={s.identity}>
+              {imageUri
+                ? <Image source={{ uri: imageUri }} style={s.avatar} onError={() => setImgError(true)} />
+                : <View style={[s.avatar, s.avatarFallback]}><Text style={s.initials}>{initials}</Text></View>}
 
-            <View style={[s.heroContent, { paddingTop: Math.max(insets.top, 28) + SPACING.md }]}>
-              {/* Avatar */}
-              <Animated.View style={{ transform: [{ scale: scaleAnim }], marginBottom: SPACING.md }}>
-                <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.avatarGlow}>
-                  <View style={[s.avatarRing, { backgroundColor: theme.surface }]}>
-                    {imageUri
-                      ? <Image source={{ uri: imageUri }} style={s.avatar} onError={() => setImgError(true)} />
-                      : <LinearGradient colors={theme.gradients.avatar as any} style={s.avatarFallback}>
-                          <Text style={s.initials}>{initials}</Text>
-                        </LinearGradient>
-                    }
-                  </View>
-                </LinearGradient>
-              </Animated.View>
-
-              <Animated.View style={{ alignItems: 'center', opacity: fadeAnim }}>
-                <Text style={s.name}>{member.name}</Text>
-                {member.position
-                  ? <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.posBadge}>
-                      <Text style={s.posText}>✦  {member.position}  ✦</Text>
-                    </LinearGradient>
-                  : null}
-                {member.department ? <Text style={s.dept}>{member.department}</Text> : null}
-              </Animated.View>
+              <Text style={s.name}>{member.name}</Text>
+              {member.position ? (
+                <View style={s.posChip}><Text style={s.posText}>{member.position}</Text></View>
+              ) : null}
+              {member.department ? <Text style={s.dept}>{member.department}</Text> : null}
+              {member.uprId ? <Text style={s.uprId}>ID · {member.uprId}</Text> : null}
             </View>
 
-            <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.md }} />
-          </LinearGradient>
+            {/* Details */}
+            <View style={s.card}>
+              {rows.map((row, i) => {
+                const content = (
+                  <View style={[s.row, i > 0 && s.rowBorder]}>
+                    <Ionicons name={row.icon} size={18} color={theme.textMuted} style={{ width: 26 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.rowLabel}>{row.label}</Text>
+                      <Text style={s.rowValue} numberOfLines={2}>{row.value}</Text>
+                    </View>
+                    {row.phone && <Ionicons name="chevron-forward" size={17} color={ACCENT.primary} />}
+                  </View>
+                );
+                return row.phone ? (
+                  <TouchableOpacity key={row.label} activeOpacity={0.6} onPress={() => Linking.openURL(`tel:${row.value}`).catch(() => {})}>
+                    {content}
+                  </TouchableOpacity>
+                ) : <View key={row.label}>{content}</View>;
+              })}
+            </View>
 
-          {/* ── Info rows ── */}
-          <Animated.View style={{ padding: SPACING.md, paddingTop: SPACING.lg, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-            {infoRows.map((row, i) => (
-              <InfoRow key={row.label} row={row} index={i} theme={theme} isDark={isDark} />
-            ))}
-          </Animated.View>
-
-          {/* ── Logout ── */}
-          <View style={{ paddingHorizontal: SPACING.md, paddingBottom: 100, marginTop: SPACING.sm }}>
-            <LinearGradient colors={['transparent', ACCENT.border, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginBottom: SPACING.lg }} />
-
+            {/* Logout */}
             {confirmingLogout ? (
-              <View style={s.confirmBox}>
+              <View style={s.confirm}>
                 <Text style={s.confirmTitle}>வெளியேற விரும்புகிறீர்களா?</Text>
                 <View style={s.confirmRow}>
                   <TouchableOpacity onPress={doLogout} activeOpacity={0.8} style={s.confirmYes}>
@@ -429,189 +301,166 @@ export default function ProfileScreen() {
                 </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => setConfirmingLogout(true)} activeOpacity={0.7} style={s.logoutBtn}>
-                <View style={[s.logoutInner, { borderColor: isDark ? 'rgba(255,80,80,0.35)' : 'rgba(220,38,38,0.3)' }]}>
-                  <Text style={{ fontSize: 18 }}>🚪</Text>
-                  <Text style={[s.logoutText, { color: isDark ? '#FF6B6B' : '#DC2626' }]}>வெளியேறு</Text>
-                </View>
+              <TouchableOpacity onPress={() => setConfirmingLogout(true)} activeOpacity={0.6} style={s.logout}>
+                <Ionicons name="log-out-outline" size={19} color={DANGER} />
+                <Text style={s.logoutText}>வெளியேறு</Text>
               </TouchableOpacity>
             )}
-          </View>
-
+          </Animated.View>
         </ScrollView>
       </View>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LOGIN FLOW
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Signed out ──────────────────────────────────────────────────────────────
   return (
     <View style={s.root}>
       <StatusBar style={theme.statusBar} />
-      <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
-      <StarBackground />
-
+      <ScreenHeader title="உள்நுழைவு" onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={[s.loginScroll, { paddingTop: Math.max(insets.top, 28) + SPACING.md }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={s.loginScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Animated.View style={{ opacity: fade }}>
 
-          {loginStep === 'email' ? (
-            /* ── EMAIL STEP ── */
-            <Animated.View style={[s.loginCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-              <LinearGradient colors={theme.gradients.card as any} style={s.loginCardGrad}>
-                <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl }} />
+            <View style={s.emblem}>
+              <Ionicons name={loginStep === 'email' ? 'person-circle-outline' : 'shield-checkmark-outline'} size={34} color={ACCENT.primary} />
+            </View>
 
-                <View style={s.loginBody}>
-                  <Animated.View style={[s.emblemWrap, { transform: [{ scale: pulseAnim }] }]}>
-                    <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.emblem}>
-                      <Text style={{ fontSize: 40 }}>⚜️</Text>
-                    </LinearGradient>
-                  </Animated.View>
+            <Text style={s.loginTitle}>
+              {loginStep === 'email' ? 'உறுப்பினர் உள்நுழைவு' : 'OTP சரிபார்ப்பு'}
+            </Text>
+            <Text style={s.loginSub}>
+              {loginStep === 'email'
+                ? 'உங்கள் பதிவு மின்னஞ்சலை உள்ளிடவும்'
+                : `${email} க்கு 6-இலக்க குறியீடு அனுப்பப்பட்டது`}
+            </Text>
 
-                  <Text style={s.loginTitle}>உறுப்பினர் உள்நுழைவு</Text>
-                  <Text style={s.loginSub}>கணேசபுரம்</Text>
-
-                  <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginVertical: SPACING.lg }} />
-
-                  <Text style={s.fieldLabel}>மின்னஞ்சல் முகவரி</Text>
-                  <View style={s.inputRow}>
-                    <Text style={{ fontSize: 18, marginRight: SPACING.sm }}>📧</Text>
-                    <TextInput
-                      style={s.input}
-                      placeholder="உங்கள் பதிவு மின்னஞ்சல்"
-                      placeholderTextColor={theme.textMuted}
-                      value={email} onChangeText={setEmail}
-                      keyboardType="email-address" autoCapitalize="none"
-                      autoCorrect={false} returnKeyType="send"
-                      onSubmitEditing={handleRequestOtp}
-                    />
-                  </View>
-
-                  <TouchableOpacity onPress={handleRequestOtp} disabled={loading} activeOpacity={0.85} style={s.btn}>
-                    <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnInner}>
-                      {loading ? <ActivityIndicator color={ON_ACCENT} /> : <Text style={s.btnText}>OTP அனுப்பு  →</Text>}
-                    </LinearGradient>
-                  </TouchableOpacity>
-
-                  <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.xl }} />
-                  <Text style={s.footerNote}>✦  கணேசபுரம்  ✦</Text>
+            {loginStep === 'email' ? (
+              <>
+                <View style={s.inputRow}>
+                  <Ionicons name="mail-outline" size={18} color={theme.textMuted} />
+                  <TextInput
+                    style={s.input}
+                    placeholder="name@example.com"
+                    placeholderTextColor={theme.textMuted}
+                    value={email} onChangeText={setEmail}
+                    keyboardType="email-address" autoCapitalize="none"
+                    autoCorrect={false} returnKeyType="send"
+                    onSubmitEditing={handleRequestOtp}
+                  />
                 </View>
-              </LinearGradient>
-            </Animated.View>
 
-          ) : (
-            /* ── OTP STEP ── */
-            <Animated.View style={[s.loginCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-              <LinearGradient colors={theme.gradients.card as any} style={s.loginCardGrad}>
-                <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light, ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl }} />
+                <TouchableOpacity onPress={handleRequestOtp} disabled={loading} activeOpacity={0.8} style={s.btn}>
+                  {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={s.btnText}>OTP அனுப்பு</Text>}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <OtpBoxes value={otp} onChange={setOtp} theme={theme} />
 
-                <View style={s.loginBody}>
-                  <Animated.View style={[s.emblemWrap, { transform: [{ scale: pulseAnim }] }]}>
-                    <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={s.emblem}>
-                      <Text style={{ fontSize: 40 }}>🔐</Text>
-                    </LinearGradient>
-                  </Animated.View>
+                <TouchableOpacity
+                  onPress={handleVerifyOtp}
+                  disabled={loading || otp.length < 6}
+                  activeOpacity={0.8}
+                  style={[s.btn, { opacity: otp.length < 6 ? 0.45 : 1 }]}
+                >
+                  {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={s.btnText}>உள்நுழை</Text>}
+                </TouchableOpacity>
 
-                  <Text style={s.loginTitle}>OTP சரிபார்ப்பு</Text>
-                  <Text style={s.loginSub}>கணேசபுரம்</Text>
-
-                  <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.md }} />
-
-                  <View style={s.emailHint}>
-                    <Text style={s.emailHintText}>📩  {email}</Text>
-                    <Text style={s.emailHintSub}>க்கு 6-இலக்க OTP அனுப்பப்பட்டது</Text>
-                  </View>
-
-                  <Text style={[s.fieldLabel, { textAlign: 'center', marginBottom: SPACING.md }]}>OTP குறியீட்டை உள்ளிடவும்</Text>
-
-                  <OtpBoxes value={otp} onChange={setOtp} theme={theme} isDark={isDark} />
-
-                  <TouchableOpacity onPress={handleVerifyOtp} disabled={loading || otp.length < 6} activeOpacity={0.85} style={[s.btn, { opacity: otp.length < 6 ? 0.5 : 1 }]}>
-                    <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnInner}>
-                      {loading ? <ActivityIndicator color={ON_ACCENT} /> : <Text style={s.btnText}>சரிபார் & உள்நுழை  ✓</Text>}
-                    </LinearGradient>
+                <View style={s.linkRow}>
+                  <TouchableOpacity onPress={() => { setLoginStep('email'); setOtp(''); setOtpToken(''); }} activeOpacity={0.6}>
+                    <Text style={s.link}>மின்னஞ்சல் மாற்று</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity onPress={() => { setLoginStep('email'); setOtp(''); setOtpToken(''); }} style={{ alignItems: 'center', marginTop: SPACING.md }}>
-                    <Text style={{ color: ACCENT.primary, fontSize: 13, fontFamily: FONT_FAMILY.semibold, letterSpacing: 0.3 }}>← மின்னஞ்சல் மாற்று</Text>
-                  </TouchableOpacity>
-
-                  {/* Resend OTP */}
-                  <View style={{ alignItems: 'center', marginTop: SPACING.sm }}>
-                    {resendTimer > 0 ? (
-                      <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: FONT_FAMILY.regular }}>
-                        {resendTimer}s பிறகு மீண்டும் அனுப்பலாம்
-                      </Text>
-                    ) : resendLoading ? (
-                      <ActivityIndicator color={ACCENT.primary} size="small" />
-                    ) : (
-                      <TouchableOpacity onPress={handleResendOtp} activeOpacity={0.7}>
-                        <Text style={{ color: ACCENT.light, fontSize: 13, fontFamily: FONT_FAMILY.semibold, letterSpacing: 0.3 }}>
-                          OTP மீண்டும் அனுப்பு ↻
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, marginTop: SPACING.xl }} />
-                  <Text style={s.footerNote}>✦  கணேசபுரம்  ✦</Text>
+                  {resendTimer > 0 ? (
+                    <Text style={s.timer}>{resendTimer}s</Text>
+                  ) : resendLoading ? (
+                    <ActivityIndicator color={ACCENT.primary} size="small" />
+                  ) : (
+                    <TouchableOpacity onPress={handleResendOtp} activeOpacity={0.6}>
+                      <Text style={s.link}>மீண்டும் அனுப்பு</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-              </LinearGradient>
-            </Animated.View>
-          )}
+              </>
+            )}
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const styles = (theme: any, isDark: boolean) => StyleSheet.create({
+const styles = (theme: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.background },
+  scroll: { padding: SPACING.md, paddingBottom: SPACING.xxl },
 
-  // Profile
-  profileScroll: { flexGrow: 1 },
-  heroBanner: { alignItems: 'center', paddingBottom: SPACING.lg, borderBottomWidth: 1, borderBottomColor: ACCENT.border },
-  heroContent: { alignItems: 'center', paddingTop: SPACING.xl, paddingHorizontal: SPACING.lg },
-  avatarGlow: { padding: 3, borderRadius: 12, ...SHADOWS.accent },
-  avatarRing: { padding: 4, borderRadius: 10 },
-  avatar: { width: 128, height: 128, borderRadius: 8 },
-  avatarFallback: { width: 128, height: 128, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  initials: { color: ACCENT.primary, fontSize: 46, fontFamily: FONT_FAMILY.black },
-  name: { color: theme.text, fontSize: 26, fontFamily: FONT_FAMILY.black, textAlign: 'center', marginBottom: SPACING.sm },
-  posBadge: { borderRadius: RADIUS.full, paddingHorizontal: SPACING.lg, paddingVertical: 8, marginBottom: SPACING.sm },
-  posText: { color: ON_ACCENT, fontFamily: FONT_FAMILY.extrabold, fontSize: 13, letterSpacing: 0.5 },
-  dept: { color: theme.textSecondary, fontSize: 13, fontFamily: FONT_FAMILY.medium },
-  logoutBtn: { borderRadius: RADIUS.lg },
-  logoutInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: RADIUS.lg, borderWidth: 1.5, gap: 10, backgroundColor: isDark ? 'rgba(255,80,80,0.06)' : 'rgba(220,38,38,0.04)' },
-  logoutText: { fontSize: 16, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 0.5 },
-  confirmBox: { backgroundColor: isDark ? 'rgba(22,8,8,0.92)' : 'rgba(255,240,240,0.97)', borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: isDark ? 'rgba(255,80,80,0.4)' : 'rgba(220,38,38,0.35)', padding: SPACING.lg },
-  confirmTitle: { color: isDark ? '#FCA5A5' : '#DC2626', fontSize: 15, fontFamily: FONT_FAMILY.bold, textAlign: 'center', marginBottom: SPACING.md },
+  identity: { alignItems: 'center', paddingVertical: SPACING.md, gap: 6 },
+  avatar: { width: 96, height: 96, borderRadius: 48 },
+  avatarFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT.tintSoft },
+  initials: { fontSize: 32, fontFamily: FONT_FAMILY.semibold, color: ACCENT.primary },
+  name: { ...TYPE.title, color: theme.text, marginTop: 6, textAlign: 'center' },
+  posChip: { backgroundColor: ACCENT.tintSoft, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 4 },
+  posText: { ...TYPE.caption, color: ACCENT.primary },
+  dept: { ...TYPE.caption, color: theme.textSecondary },
+  uprId: { ...TYPE.caption, color: theme.textMuted },
+
+  card: {
+    marginTop: SPACING.md,
+    backgroundColor: theme.card,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.border,
+    paddingHorizontal: SPACING.md,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 },
+  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.divider },
+  rowLabel: { ...TYPE.caption, color: theme.textMuted, marginBottom: 2 },
+  rowValue: { ...TYPE.bodyStrong, color: theme.text },
+
+  logout: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: SPACING.lg, paddingVertical: 15,
+    borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: DANGER,
+  },
+  logoutText: { ...TYPE.bodyStrong, color: DANGER },
+
+  confirm: {
+    marginTop: SPACING.lg, padding: SPACING.md,
+    borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: DANGER,
+  },
+  confirmTitle: { ...TYPE.bodyStrong, color: DANGER, textAlign: 'center', marginBottom: SPACING.md },
   confirmRow: { flexDirection: 'row', gap: SPACING.sm },
-  confirmYes: { flex: 1, backgroundColor: '#DC2626', borderRadius: RADIUS.full, paddingVertical: 13, alignItems: 'center' },
-  confirmYesText: { color: '#fff', fontFamily: FONT_FAMILY.extrabold, fontSize: 14 },
-  confirmNo: { flex: 1, borderRadius: RADIUS.full, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: ACCENT.border },
-  confirmNoText: { fontFamily: FONT_FAMILY.bold, fontSize: 14 },
+  confirmYes: { flex: 1, backgroundColor: DANGER, borderRadius: RADIUS.sm, paddingVertical: 12, alignItems: 'center' },
+  confirmYesText: { ...TYPE.bodyStrong, color: '#FFFFFF' },
+  confirmNo: {
+    flex: 1, borderRadius: RADIUS.sm, paddingVertical: 12, alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border,
+  },
+  confirmNoText: { ...TYPE.bodyStrong },
 
-  // Login shared
-  loginScroll: { flexGrow: 1, justifyContent: 'center', padding: SPACING.md },
-  loginCard: { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 1, borderColor: ACCENT.border, ...SHADOWS.card },
-  loginCardGrad: { borderRadius: RADIUS.xl },
-  loginBody: { padding: SPACING.lg },
-  emblemWrap: { alignSelf: 'center', marginBottom: SPACING.md },
-  emblem: { width: 88, height: 88, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', ...SHADOWS.accent },
-  loginTitle: { color: theme.text, fontSize: 24, fontFamily: FONT_FAMILY.black, textAlign: 'center', marginBottom: 4 },
-  loginSub: { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.bold, textAlign: 'center', letterSpacing: 2 },
-  fieldLabel: { color: theme.textSecondary, fontSize: 11, fontFamily: FONT_FAMILY.bold, letterSpacing: 0.5, marginBottom: 8 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(248,250,252,0.82)', borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 13, marginBottom: SPACING.md, borderWidth: 1, borderColor: ACCENT.border },
-  input: { flex: 1, color: theme.text, fontSize: 15, fontFamily: FONT_FAMILY.regular },
-  btn: { borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.sm },
-  btnInner: { paddingVertical: 15, alignItems: 'center', borderRadius: RADIUS.full },
-  btnText: { color: ON_ACCENT, fontFamily: FONT_FAMILY.extrabold, fontSize: 15, letterSpacing: 0.3 },
+  loginScroll: { flexGrow: 1, justifyContent: 'center', padding: SPACING.lg },
+  emblem: {
+    alignSelf: 'center', width: 68, height: 68, borderRadius: 34,
+    backgroundColor: ACCENT.tintSoft, alignItems: 'center', justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
+  loginTitle: { ...TYPE.title, color: theme.text, textAlign: 'center' },
+  loginSub: { ...TYPE.caption, color: theme.textMuted, textAlign: 'center', marginTop: 6, marginBottom: SPACING.lg },
 
-  // OTP step extras
-  emailHint: { backgroundColor: isDark ? ACCENT.tintSoft : 'rgba(58,46,40,0.05)', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.sm, marginBottom: SPACING.lg, borderWidth: 1, borderColor: ACCENT.border, alignItems: 'center' },
-  emailHintText: { color: ACCENT.primary, fontSize: 13, fontFamily: FONT_FAMILY.bold },
-  emailHintSub: { color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.regular, marginTop: 4 },
-  footerNote: { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.medium, textAlign: 'center', marginTop: SPACING.md, letterSpacing: 3, opacity: 0.6 },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: theme.surface, borderRadius: RADIUS.md,
+    paddingHorizontal: 14, paddingVertical: 14, marginBottom: SPACING.sm,
+  },
+  input: { flex: 1, color: theme.text, ...TYPE.body, paddingVertical: 0 },
+
+  btn: {
+    backgroundColor: ACCENT.primary, borderRadius: RADIUS.md,
+    paddingVertical: 15, alignItems: 'center', justifyContent: 'center', minHeight: 50,
+  },
+  btnText: { ...TYPE.bodyStrong, color: '#FFFFFF' },
+
+  linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.md },
+  link: { ...TYPE.label, color: ACCENT.primary },
+  timer: { ...TYPE.label, color: theme.textMuted },
 });

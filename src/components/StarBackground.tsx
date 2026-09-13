@@ -60,7 +60,7 @@ export default function StarBackground() {
 
   const starColor  = isDark ? ACCENT.light : DEEP.primary;
   const minOpacity = isDark ? 0.06       : 0.11;
-  const lineColor = isDark ? 'rgba(217,119,87,0.10)' : 'rgba(58,46,40,0.07)';
+  const lineColor = isDark ? 'rgba(14,165,233,0.10)' : 'rgba(30,41,59,0.07)';
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">

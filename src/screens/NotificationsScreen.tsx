@@ -13,7 +13,7 @@ import {
   formatRelativeTime,
   extractIcon,
 } from '../context/NotificationContext';
-import { GOLD, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
+import { ACCENT, ON_ACCENT, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
 import StarBackground from '../components/StarBackground';
 
 // ── Group notifications by day ────────────────────────────────────────────────
@@ -78,14 +78,14 @@ function NotifCard({
           colors={theme.gradients.card}
           style={[
             s.card,
-            { borderLeftColor: isUnread ? GOLD.primary : (isDark ? '#2A2A2A' : '#D4B87A'),
+            { borderLeftColor: isUnread ? ACCENT.primary : (isDark ? '#232B3D' : '#C7CDD9'),
               opacity: item.viewed ? 0.7 : 1,
               ...SHADOWS.card },
           ]}
         >
-          {isUnread && <View style={[s.unreadDot, { backgroundColor: GOLD.primary }]} />}
+          {isUnread && <View style={[s.unreadDot, { backgroundColor: ACCENT.primary }]} />}
 
-          <View style={[s.iconWrap, { backgroundColor: isUnread ? 'rgba(201,162,39,0.18)' : 'rgba(201,162,39,0.08)' }]}>
+          <View style={[s.iconWrap, { backgroundColor: isUnread ? 'rgba(199,205,217,0.16)' : 'rgba(199,205,217,0.07)' }]}>
             <Text style={{ fontSize: 22 }}>{icon}</Text>
           </View>
 
@@ -111,9 +111,9 @@ function NotifCard({
 function SectionLabel({ label }: { label: string }) {
   return (
     <View style={s.sectionRow}>
-      <LinearGradient colors={[GOLD.dark, GOLD.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.sectionLine} />
+      <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.sectionLine} />
       <Text style={s.sectionLabel}>{label}</Text>
-      <LinearGradient colors={[GOLD.primary, GOLD.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.sectionLine} />
+      <LinearGradient colors={[ACCENT.primary, ACCENT.dark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.sectionLine} />
     </View>
   );
 }
@@ -153,7 +153,7 @@ export default function NotificationsScreen() {
           </View>
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             {unreadCount > 0 && (
-              <LinearGradient colors={[GOLD.dark, GOLD.primary]} style={s.badge}>
+              <LinearGradient colors={[ACCENT.dark, ACCENT.primary]} style={s.badge}>
                 <Text style={s.badgeText}>{unreadCount} புதியவை</Text>
               </LinearGradient>
             )}
@@ -162,15 +162,15 @@ export default function NotificationsScreen() {
 
         {/* Divider */}
         <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: SPACING.lg, marginBottom: SPACING.sm }}>
-          <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
+          <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
         </Animated.View>
 
         {/* Action buttons */}
         {!isEmpty && (
           <Animated.View style={[s.actionRow, { opacity: fadeAnim }]}>
             {unreadCount > 0 && (
-              <TouchableOpacity onPress={markAllViewed} activeOpacity={0.7} style={[s.actionBtn, { borderColor: GOLD.border }]}>
-                <Text style={[s.actionBtnText, { color: GOLD.primary }]}>✓ அனைத்தும் படிக்கப்பட்டது</Text>
+              <TouchableOpacity onPress={markAllViewed} activeOpacity={0.7} style={[s.actionBtn, { borderColor: ACCENT.border }]}>
+                <Text style={[s.actionBtnText, { color: ACCENT.primary }]}>✓ அனைத்தும் படிக்கப்பட்டது</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={clearAll} activeOpacity={0.7} style={[s.actionBtn, { borderColor: isDark ? 'rgba(239,68,68,0.35)' : 'rgba(220,38,38,0.3)' }]}>
@@ -187,7 +187,7 @@ export default function NotificationsScreen() {
             <Text style={[s.emptyBody, { color: theme.textMuted }]}>
               Salesforce-ல் Notification__c record உருவாக்கும்போது push notification வரும், அது இங்கு சேமிக்கப்படும்.
             </Text>
-            <LinearGradient colors={[GOLD.dark, GOLD.primary, GOLD.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.emptyDivider} />
+            <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.emptyDivider} />
             <Text style={[s.emptyHint, { color: theme.textMuted }]}>NotificationTrigger → ExpoPushNotificationController → Expo Push API → Mobile</Text>
           </Animated.View>
         )}
@@ -212,7 +212,7 @@ export default function NotificationsScreen() {
         {/* Footer */}
         {!isEmpty && (
           <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', paddingBottom: SPACING.xxl, paddingTop: SPACING.lg }}>
-            <LinearGradient colors={['transparent', GOLD.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
+            <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
             <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, letterSpacing: 1 }}>
               ✦  UPR நட்பு சாம்ராஜ்யம்  ✦
             </Text>
@@ -227,19 +227,19 @@ const s = StyleSheet.create({
   root:         { flex: 1 },
   scroll:       { paddingBottom: SPACING.xxl },
   header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: SPACING.md },
-  headerTitle:  { fontSize: 30, fontFamily: FONT_FAMILY.black, letterSpacing: -0.5 },
-  headerSub:    { color: GOLD.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 2.5, marginTop: 2 },
+  headerTitle:  { fontSize: 30, fontFamily: FONT_FAMILY.black },
+  headerSub:    { color: ACCENT.primary, fontSize: 10, fontFamily: FONT_FAMILY.bold, letterSpacing: 2.5, marginTop: 2 },
   badge:        { borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 6 },
-  badgeText:    { color: '#1A0F00', fontSize: 12, fontFamily: FONT_FAMILY.extrabold },
+  badgeText:    { color: ON_ACCENT, fontSize: 12, fontFamily: FONT_FAMILY.extrabold },
   actionRow:    { flexDirection: 'row', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm, flexWrap: 'wrap' },
   actionBtn:    { borderRadius: RADIUS.full, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1 },
   actionBtnText:{ fontSize: 12, fontFamily: FONT_FAMILY.semibold },
   sectionRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm, marginTop: SPACING.sm, gap: SPACING.sm },
   sectionLine:  { flex: 1, height: 1 },
-  sectionLabel: { color: GOLD.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 1.5 },
+  sectionLabel: { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 1.5 },
   card:         {
     flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
-    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: GOLD.border,
+    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: ACCENT.border,
     borderLeftWidth: 3, padding: SPACING.md,
   },
   unreadDot:    { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4 },

@@ -1,19 +1,15 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Animated, RefreshControl, Dimensions,
+  ActivityIndicator, Animated, RefreshControl,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useRefreshContext } from '../context/RefreshContext';
-import { ACCENT, DEEP, ON_ACCENT, SOFT_WHITE, SPACING, RADIUS, SHADOWS, FONT_FAMILY } from '../theme';
+import { ACCENT, SPACING, RADIUS, TYPE, FONT_FAMILY } from '../theme';
 import { fetchKural, fetchWeather, logError } from '../api';
-import StarBackground from '../components/StarBackground';
-
-const { width } = Dimensions.get('window');
 
 interface KuralData {
   number: number; line1: string; line2: string;
@@ -26,10 +22,19 @@ interface WeatherData {
   forecast?: { forecastday: Array<{ astro: { sunrise: string; sunset: string }; day: { maxtemp_c: number; mintemp_c: number } }> };
 }
 
+const weatherIcon = (c = ''): keyof typeof Ionicons.glyphMap => {
+  const t = c.toLowerCase();
+  if (t.includes('sun') || t.includes('clear')) return 'sunny-outline';
+  if (t.includes('rain') || t.includes('drizzle')) return 'rainy-outline';
+  if (t.includes('thunder')) return 'thunderstorm-outline';
+  if (t.includes('cloud')) return 'partly-sunny-outline';
+  if (t.includes('fog') || t.includes('mist')) return 'cloudy-outline';
+  return 'partly-sunny-outline';
+};
+
 export default function HomeScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { register, unregister } = useRefreshContext();
-  const insets = useSafeAreaInsets();
   const [kural, setKural] = useState<KuralData | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [kuralLoading, setKuralLoading] = useState(true);
@@ -37,23 +42,10 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
   const coordsRef = useRef<{ lat: number; lon: number } | null>(null);
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const card1Anim = useRef(new Animated.Value(0)).current;
-  const card2Anim = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 900, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, tension: 35, friction: 8, useNativeDriver: true }),
-    ]).start();
-    Animated.sequence([Animated.delay(300),  Animated.timing(card1Anim, { toValue: 1, duration: 600, useNativeDriver: true })]).start();
-    Animated.sequence([Animated.delay(550),  Animated.timing(card2Anim, { toValue: 1, duration: 600, useNativeDriver: true })]).start();
-    Animated.loop(Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.04, duration: 2500, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1,    duration: 2500, useNativeDriver: true }),
-    ])).start();
+    Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
   const loadKural = useCallback(async () => {
@@ -111,190 +103,222 @@ export default function HomeScreen() {
     return () => unregister('Home');
   }, [onRefresh, register, unregister]);
 
-  const weatherEmoji = (c = '') => {
-    const t = c.toLowerCase();
-    if (t.includes('sun') || t.includes('clear'))  return '☀️';
-    if (t.includes('rain') || t.includes('drizzle')) return '🌧️';
-    if (t.includes('thunder'))                      return '⛈️';
-    if (t.includes('cloud'))                        return '⛅';
-    if (t.includes('fog') || t.includes('mist'))   return '🌫️';
-    return '🌤️';
-  };
-
-  const s = styles(theme, isDark);
+  const s = styles(theme);
+  const day = weather?.forecast?.forecastday?.[0];
 
   return (
     <View style={s.root}>
       <StatusBar style={theme.statusBar} />
-      <LinearGradient colors={theme.gradients.background as any} style={StyleSheet.absoluteFill} />
-      <StarBackground />
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />}>
+      <ScrollView
+        contentContainerStyle={s.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />}
+      >
+        <Animated.View style={{ opacity: fade }}>
 
-        {/* Header */}
-        <Animated.View style={[s.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }], paddingTop: Math.max(insets.top, 28) + 8 }]}>
-          <View style={s.headerTextBlock}>
-            <Text style={s.headerOverline}>G ONE COMMUNITY</Text>
-            <Text style={s.headerTitle}>கணேசபுரம்</Text>
+          {/* ── Thirukural ── */}
+          <View style={s.card}>
+            <View style={s.cardHead}>
+              <View style={s.cardHeadLeft}>
+                <Ionicons name="book-outline" size={17} color={ACCENT.primary} />
+                <Text style={s.cardTitle}>திருக்குறள்</Text>
+              </View>
+              {kural && <Text style={s.cardMeta}>#{kural.number}</Text>}
+            </View>
+
+            {kuralLoading ? (
+              <ActivityIndicator color={ACCENT.primary} style={{ marginVertical: 40 }} />
+            ) : kural ? (
+              <View style={s.cardBody}>
+                <Text style={s.kuralLine}>{kural.line1}</Text>
+                <Text style={s.kuralLine}>{kural.line2}</Text>
+
+                {kural.chapter ? (
+                  <View style={s.chip}>
+                    <Text style={s.chipText}>{kural.chapter}</Text>
+                  </View>
+                ) : null}
+
+                {kural.urai1 ? (
+                  <View style={s.meaning}>
+                    <Text style={s.meaningLabel}>பொருள்</Text>
+                    <Text style={s.meaningText}>{kural.urai1}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            <TouchableOpacity onPress={loadKural} activeOpacity={0.6} style={s.cardAction}>
+              <Text style={s.cardActionText}>அடுத்த குறள்</Text>
+              <Ionicons name="arrow-forward" size={15} color={ACCENT.primary} />
+            </TouchableOpacity>
           </View>
-          <LinearGradient colors={theme.gradients.accent as any} style={s.headerMark}>
-            <Text style={s.headerMarkText}>G</Text>
-          </LinearGradient>
-        </Animated.View>
 
-        <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: SPACING.lg, marginBottom: SPACING.md }}>
-          <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1 }} />
-        </Animated.View>
-
-        {/* Thirukural Card */}
-        <Animated.View style={[s.cardWrap, { opacity: card1Anim, transform: [{ translateY: card1Anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}>
-          <LinearGradient colors={theme.gradients.card as any} style={s.card}>
-            <View style={s.cardInnerBorder}>
-              <LinearGradient colors={theme.gradients.accent as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
-                <Text style={s.badgeText}>✦ திருக்குறள் ✦</Text>
-                {kural && <Text style={s.badgeNum}>#{kural.number}</Text>}
-              </LinearGradient>
-
-              {kuralLoading ? (
-                <ActivityIndicator color={ACCENT.primary} size="large" style={{ marginVertical: 32 }} />
-              ) : kural ? (
-                <View style={s.kuralBody}>
-                  <Animated.Text style={[s.kuralLine, { transform: [{ scale: pulseAnim }] }]}>{kural.line1}</Animated.Text>
-                  <Text style={s.kuralLine}>{kural.line2}</Text>
-                  {kural.chapter ? (
-                    <View style={s.chapterTag}>
-                      <Text style={s.chapterText}>அதிகாரம்: {kural.chapter}</Text>
-                    </View>
-                  ) : null}
-                  {kural.urai1 ? (
-                    <View style={s.translationBox}>
-                      <Text style={s.translationLabel}>✦ பொருள்</Text>
-                      <Text style={s.translationText}>{kural.urai1}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-
-              <TouchableOpacity onPress={loadKural} style={s.nextBtn} activeOpacity={0.85}>
-                <LinearGradient colors={[ACCENT.dark, ACCENT.primary, ACCENT.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.nextBtnInner}>
-                  <Text style={s.nextBtnText}>அடுத்த குறள் ✦</Text>
-                </LinearGradient>
+          {/* ── Weather ── */}
+          <View style={s.card}>
+            <View style={s.cardHead}>
+              <View style={s.cardHeadLeft}>
+                <Ionicons name="partly-sunny-outline" size={17} color={ACCENT.primary} />
+                <Text style={s.cardTitle}>வானிலை</Text>
+              </View>
+              <TouchableOpacity
+                onPress={handleLocationPress}
+                activeOpacity={0.6}
+                style={[s.locChip, usingCurrentLocation && s.locChipOn]}
+                hitSlop={6}
+              >
+                <Ionicons
+                  name="location-outline"
+                  size={13}
+                  color={usingCurrentLocation ? ACCENT.primary : theme.textMuted}
+                />
+                <Text style={[s.locChipText, usingCurrentLocation && { color: ACCENT.primary }]}>
+                  {usingCurrentLocation ? 'என் இடம்' : 'இடம்'}
+                </Text>
               </TouchableOpacity>
             </View>
-          </LinearGradient>
-        </Animated.View>
 
-        {/* Weather Card */}
-        <Animated.View style={[s.cardWrap, { opacity: card2Anim, transform: [{ translateY: card2Anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}>
-          <LinearGradient colors={theme.gradients.card as any} style={s.card}>
-            <View style={s.cardInnerBorder}>
-              <LinearGradient colors={isDark ? [DEEP.deep, DEEP.primary] : [DEEP.primary, DEEP.light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.badge}>
-                <Text style={[s.badgeText, { color: SOFT_WHITE }]}>✦ வானிலை ✦</Text>
-                <TouchableOpacity
-                  onPress={handleLocationPress}
-                  activeOpacity={0.75}
-                  style={[s.locBtn, usingCurrentLocation && s.locBtnActive]}
-                >
-                  <Text style={s.locBtnText}>
-                    {usingCurrentLocation ? '📍 என் இடம்' : '📍 இடம்'}
-                  </Text>
-                </TouchableOpacity>
-              </LinearGradient>
+            {weatherLoading ? (
+              <ActivityIndicator color={ACCENT.primary} style={{ marginVertical: 40 }} />
+            ) : weather ? (
+              <View style={s.cardBody}>
+                <Text style={s.place}>{weather.location.name}</Text>
+                {weather.location.region ? <Text style={s.region}>{weather.location.region}</Text> : null}
 
-              {weatherLoading ? (
-                <ActivityIndicator color={ACCENT.primary} size="large" style={{ marginVertical: 32 }} />
-              ) : weather ? (
-                <View style={s.weatherBody}>
-                  <View style={s.weatherRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.weatherLoc}>📍 {weather.location.name}</Text>
-                      <Text style={s.weatherRegion}>{weather.location.region}</Text>
-                      <Text style={s.weatherTemp}>{Math.round(weather.current.temp_c)}°</Text>
-                      <Text style={s.weatherCond}>{weatherEmoji(weather.current.condition.text)} {weather.current.condition.text}</Text>
-                    </View>
-                    <View style={s.weatherStats}>
-                      <WeatherStat icon="🌡" label="உணர்வு"   value={`${Math.round(weather.current.feelslike_c)}°`}  theme={theme} />
-                      <WeatherStat icon="💧" label="ஈரப்பதம்" value={`${weather.current.humidity}%`}                 theme={theme} />
-                      <WeatherStat icon="💨" label="காற்று"    value={`${Math.round(weather.current.wind_kph)}km/h`}  theme={theme} />
-                    </View>
+                <View style={s.tempRow}>
+                  <Text style={s.temp}>{Math.round(weather.current.temp_c)}°</Text>
+                  <View style={s.condBlock}>
+                    <Ionicons name={weatherIcon(weather.current.condition.text)} size={26} color={ACCENT.primary} />
+                    <Text style={s.cond}>{weather.current.condition.text}</Text>
                   </View>
-                  {weather.forecast?.forecastday[0] && (
-                    <View style={s.sunRow}>
-                      <Text style={s.sunText}>🌅 {weather.forecast.forecastday[0].astro.sunrise}</Text>
-                      <Text style={s.sunText}>🌇 {weather.forecast.forecastday[0].astro.sunset}</Text>
-                      <Text style={s.sunText}>↑{Math.round(weather.forecast.forecastday[0].day.maxtemp_c)}° ↓{Math.round(weather.forecast.forecastday[0].day.mintemp_c)}°</Text>
-                    </View>
-                  )}
                 </View>
-              ) : (
-                <View style={{ padding: SPACING.xl, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 32, marginBottom: 8 }}>🌤️</Text>
-                  <Text style={[s.weatherRegion, { textAlign: 'center' }]}>வானிலை தகவல் கிடைக்கவில்லை</Text>
-                  <TouchableOpacity onPress={() => loadWeather()} style={{ marginTop: 12 }}>
-                    <Text style={{ color: ACCENT.primary, fontFamily: FONT_FAMILY.semibold }}>மீண்டும் முயற்சி</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </LinearGradient>
-        </Animated.View>
 
-        <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', paddingBottom: SPACING.xl }}>
-          <LinearGradient colors={['transparent', ACCENT.primary, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 1, width: '60%', marginBottom: SPACING.md }} />
-          <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: FONT_FAMILY.medium, letterSpacing: 1 }}>நன்றி. G One Mobile App Development Team ✦</Text>
+                <View style={s.stats}>
+                  <Stat icon="thermometer-outline" label="உணர்வு" value={`${Math.round(weather.current.feelslike_c)}°`} theme={theme} />
+                  <Stat icon="water-outline" label="ஈரப்பதம்" value={`${weather.current.humidity}%`} theme={theme} />
+                  <Stat icon="navigate-outline" label="காற்று" value={`${Math.round(weather.current.wind_kph)}`} theme={theme} />
+                </View>
+
+                {day && (
+                  <View style={s.sunRow}>
+                    <SunItem icon="arrow-up-outline" text={`${Math.round(day.day.maxtemp_c)}°`} theme={theme} />
+                    <SunItem icon="arrow-down-outline" text={`${Math.round(day.day.mintemp_c)}°`} theme={theme} />
+                    <SunItem icon="sunny-outline" text={day.astro.sunrise} theme={theme} />
+                    <SunItem icon="moon-outline" text={day.astro.sunset} theme={theme} />
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={s.errorBox}>
+                <Ionicons name="cloud-offline-outline" size={30} color={theme.textMuted} />
+                <Text style={s.errorText}>வானிலை தகவல் கிடைக்கவில்லை</Text>
+                <TouchableOpacity onPress={() => loadWeather()} activeOpacity={0.6}>
+                  <Text style={s.retry}>மீண்டும் முயற்சி</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          <Text style={s.footer}>G One · கணேசபுரம்</Text>
         </Animated.View>
       </ScrollView>
     </View>
   );
 }
 
-function WeatherStat({ icon, label, value, theme }: any) {
+function Stat({ icon, label, value, theme }: {
+  icon: keyof typeof Ionicons.glyphMap; label: string; value: string; theme: any;
+}) {
   return (
-    <View style={{ alignItems: 'center', marginBottom: 10 }}>
-      <Text style={{ fontSize: 14 }}>{icon}</Text>
-      <Text style={{ color: theme.textMuted, fontSize: 9, fontFamily: FONT_FAMILY.semibold, marginTop: 2 }}>{label}</Text>
-      <Text style={{ color: ACCENT.light, fontSize: 13, fontFamily: FONT_FAMILY.bold }}>{value}</Text>
+    <View style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+      <Ionicons name={icon} size={17} color={theme.textMuted} />
+      <Text style={{ ...TYPE.bodyStrong, color: theme.text }}>{value}</Text>
+      <Text style={{ ...TYPE.caption, color: theme.textMuted }}>{label}</Text>
     </View>
   );
 }
 
-const styles = (theme: any, isDark: boolean) => StyleSheet.create({
-  root:            { flex: 1, backgroundColor: theme.background },
-  scroll:          { flex: 1 },
-  content:         { paddingBottom: SPACING.xxl },
-  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: SPACING.md },
-  headerTextBlock: { flex: 1, paddingRight: SPACING.md },
-  headerOverline:  { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 2.4, marginBottom: 6 },
-  headerTitle:     { color: theme.text, fontSize: width < 380 ? 28 : 34, fontFamily: FONT_FAMILY.black },
-  headerMark:      { width: 50, height: 50, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', ...SHADOWS.accent },
-  headerMarkText:  { color: ON_ACCENT, fontSize: 24, fontFamily: FONT_FAMILY.black },
-  cardWrap:        { paddingHorizontal: SPACING.md, marginBottom: SPACING.md },
-  card:            { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 1, borderColor: ACCENT.border, backgroundColor: theme.card, ...SHADOWS.card },
-  cardInnerBorder: { margin: 1, borderRadius: RADIUS.xl - 1 },
-  badge:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12 },
-  badgeText:       { color: ON_ACCENT, fontSize: 13, fontFamily: FONT_FAMILY.extrabold, letterSpacing: 1 },
-  badgeNum:        { color: 'rgba(6,19,28,0.58)', fontSize: 12, fontFamily: FONT_FAMILY.semibold },
-  kuralBody:       { padding: SPACING.lg, paddingBottom: SPACING.md },
-  kuralLine:       { color: theme.text, fontSize: width < 380 ? 18 : 20, fontFamily: FONT_FAMILY.extrabold, lineHeight: 34, textAlign: 'center', marginBottom: 4 },
-  chapterTag:      { alignSelf: 'center', backgroundColor: ACCENT.subtle, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 4, marginTop: SPACING.sm, borderWidth: 1, borderColor: ACCENT.border },
-  chapterText:     { color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.bold },
-  translationBox:  { backgroundColor: isDark ? ACCENT.tintSoft : 'rgba(58,46,40,0.05)', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.md, borderLeftWidth: 3, borderLeftColor: ACCENT.primary },
-  translationLabel:{ color: ACCENT.primary, fontSize: 11, fontFamily: FONT_FAMILY.extrabold, marginBottom: 4, letterSpacing: 0.5 },
-  translationText: { color: theme.textSecondary, fontSize: 14, fontFamily: FONT_FAMILY.regular, lineHeight: 22, fontStyle: 'italic' },
-  nextBtn:         { margin: SPACING.md, marginTop: 4, borderRadius: RADIUS.full, overflow: 'hidden' },
-  nextBtnInner:    { paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.full },
-  nextBtnText:     { color: ON_ACCENT, fontFamily: FONT_FAMILY.extrabold, fontSize: 14, letterSpacing: 0.5 },
-  locBtn:          { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  locBtnActive:    { backgroundColor: 'rgba(74,222,128,0.25)', borderColor: '#4ADE80' },
-  locBtnText:      { color: SOFT_WHITE, fontSize: 11, fontFamily: FONT_FAMILY.bold },
-  weatherBody:     { padding: SPACING.lg },
-  weatherRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  weatherLoc:      { color: theme.text, fontSize: 14, fontFamily: FONT_FAMILY.bold },
-  weatherRegion:   { color: theme.textMuted, fontSize: 12, fontFamily: FONT_FAMILY.regular, marginBottom: 4 },
-  weatherTemp:     { color: ACCENT.light, fontSize: 60, fontFamily: FONT_FAMILY.black, lineHeight: 66 },
-  weatherCond:     { color: theme.textSecondary, fontSize: 13, fontFamily: FONT_FAMILY.regular, marginTop: 2 },
-  weatherStats:    { alignItems: 'center', paddingTop: 8 },
-  sunRow:          { flexDirection: 'row', justifyContent: 'space-around', marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: ACCENT.border },
-  sunText:         { color: theme.textSecondary, fontSize: 11, fontFamily: FONT_FAMILY.semibold },
+function SunItem({ icon, text, theme }: {
+  icon: keyof typeof Ionicons.glyphMap; text: string; theme: any;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <Ionicons name={icon} size={13} color={theme.textMuted} />
+      <Text style={{ ...TYPE.caption, color: theme.textSecondary }}>{text}</Text>
+    </View>
+  );
+}
+
+const styles = (theme: any) => StyleSheet.create({
+  root:    { flex: 1, backgroundColor: theme.background },
+  content: { padding: SPACING.md, paddingBottom: SPACING.xxl, gap: SPACING.md },
+
+  card: {
+    backgroundColor: theme.card,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.border,
+    overflow: 'hidden',
+  },
+  cardHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md, paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.divider,
+  },
+  cardHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardTitle: { ...TYPE.heading, color: theme.text },
+  cardMeta:  { ...TYPE.caption, color: theme.textMuted },
+  cardBody:  { padding: SPACING.md },
+  cardAction: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 14,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.divider,
+  },
+  cardActionText: { ...TYPE.bodyStrong, color: ACCENT.primary },
+
+  locChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: RADIUS.full, backgroundColor: theme.surface,
+  },
+  locChipOn: { backgroundColor: ACCENT.tintSoft },
+  locChipText: { ...TYPE.caption, color: theme.textMuted },
+
+  kuralLine: { ...TYPE.body, fontFamily: FONT_FAMILY.semibold, fontSize: 17, lineHeight: 30, color: theme.text },
+  chip: {
+    alignSelf: 'flex-start', marginTop: SPACING.sm,
+    backgroundColor: ACCENT.tintSoft, borderRadius: RADIUS.full,
+    paddingHorizontal: 12, paddingVertical: 5,
+  },
+  chipText: { ...TYPE.caption, color: ACCENT.primary },
+  meaning: {
+    marginTop: SPACING.md, paddingTop: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.divider,
+  },
+  meaningLabel: { ...TYPE.caption, color: theme.textMuted, marginBottom: 5 },
+  meaningText:  { ...TYPE.body, color: theme.textSecondary },
+
+  place:  { ...TYPE.heading, color: theme.text },
+  region: { ...TYPE.caption, color: theme.textMuted, marginTop: 2 },
+  tempRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm },
+  temp:   { fontSize: 56, lineHeight: 62, fontFamily: FONT_FAMILY.bold, color: theme.text, letterSpacing: -2 },
+  condBlock: { alignItems: 'flex-end', gap: 4, flex: 1, paddingLeft: SPACING.md },
+  cond:   { ...TYPE.caption, color: theme.textSecondary, textAlign: 'right' },
+
+  stats: {
+    flexDirection: 'row', marginTop: SPACING.md, paddingTop: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.divider,
+  },
+  sunRow: {
+    flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: SPACING.sm,
+    marginTop: SPACING.md, paddingTop: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.divider,
+  },
+
+  errorBox:  { alignItems: 'center', gap: 8, paddingVertical: SPACING.xl },
+  errorText: { ...TYPE.label, color: theme.textMuted },
+  retry:     { ...TYPE.bodyStrong, color: ACCENT.primary, marginTop: 4 },
+
+  footer: { ...TYPE.caption, color: theme.textMuted, textAlign: 'center', marginTop: SPACING.sm },
 });

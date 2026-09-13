@@ -73,6 +73,95 @@ export async function checkSession(memberId: string, sessionToken: string) {
   return res.data as { valid: boolean };
 }
 
+// ── Community: events, calendar, news, trips ─────────────────────────────────
+
+// Event and member photos are both ContentVersions behind the same proxy.
+// BASE_URL carries a trailing slash, which axios normalises but string
+// concatenation does not — the resulting // makes the host answer 308.
+export function imageUrl(versionId: string) {
+  return `${BASE_URL.replace(/\/+$/, '')}/api/member/image/${versionId}`;
+}
+
+export async function fetchEvents(tripsOnly = false) {
+  const res = await api.get('/api/community/events', {
+    params: tripsOnly ? { trip: 'true' } : {},
+  });
+  return res.data;
+}
+
+export async function fetchEventDetail(eventId: string) {
+  const res = await api.get(`/api/community/events/${eventId}`);
+  return res.data;
+}
+
+export async function fetchCalendar() {
+  const res = await api.get('/api/community/calendar');
+  return res.data;
+}
+
+export async function fetchNews() {
+  const res = await api.get('/api/community/news');
+  return res.data;
+}
+
+export async function fetchTrip(eventId: string) {
+  const res = await api.get(`/api/community/trip/${eventId}`);
+  return res.data;
+}
+
+export async function registerTripMember(
+  eventId: string,
+  payload: { name: string; mobile: string; email?: string },
+) {
+  const res = await api.post(`/api/community/trip/${eventId}/register`, payload);
+  return res.data;
+}
+
+// ── Quiz ─────────────────────────────────────────────────────────────────────
+
+export async function quizLogin(userId: string, loginCode: string) {
+  const res = await api.post('/api/quiz/login', { userId, loginCode });
+  return res.data;
+}
+
+export async function registerQuizUser(name: string, email: string) {
+  const res = await api.post('/api/quiz/register', { name, email });
+  return res.data;
+}
+
+export async function fetchQuizResults(quizId: string) {
+  const res = await api.get(`/api/quiz/${quizId}/results`);
+  return res.data;
+}
+
+export async function fetchQuizQuestions(quizId: string) {
+  const res = await api.get(`/api/quiz/${quizId}/questions`);
+  return res.data;
+}
+
+export async function submitQuiz(
+  memberId: string,
+  answers: Record<string, string>,
+  warningCount: number,
+) {
+  const res = await api.post('/api/quiz/submit', { memberId, answers, warningCount });
+  return res.data;
+}
+
+// Fire-and-forget: a lost warning must not interrupt the quiz.
+export async function reportQuizWarning(memberId: string) {
+  try {
+    await api.post('/api/quiz/warning', { memberId });
+  } catch {
+    // ignored
+  }
+}
+
+export async function fetchAnswerSheet(memberId: string) {
+  const res = await api.get(`/api/quiz/answersheet/${memberId}`);
+  return res.data;
+}
+
 // Error logging — fire-and-forget, silently ignores failures
 export async function logError(name: string, description: string, memberId?: string | null) {
   try {

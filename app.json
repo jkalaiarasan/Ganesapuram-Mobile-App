@@ -18,7 +18,7 @@
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundColor": "#0C0A09"
+        "backgroundColor": "#080C14"
       },
       "permissions": [
         "android.permission.INTERNET",
@@ -40,7 +40,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#C9A227",
+          "color": "#0EA5E9",
           "sounds": []
         }
       ],
