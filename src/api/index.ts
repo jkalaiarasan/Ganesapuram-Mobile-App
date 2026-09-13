@@ -75,6 +75,22 @@ export async function checkSession(memberId: string, sessionToken: string) {
 
 // ── Community: events, calendar, news, trips ─────────────────────────────────
 
+// Certificates and tickets are Visualforce pages rendered as PDF on the public
+// site. Both are guest-readable by record id, so the app links straight to them
+// rather than re-implementing the document.
+const SITE_URL = 'https://account-dev-ed.develop.my.site.com/upr/apex';
+
+// Takes a CompetitionMember__c id — the same page serves prize winners and
+// participants, styled by Prize__c.
+export function certificateUrl(competitionMemberId: string) {
+  return `${SITE_URL}/eventCertificate?id=${competitionMemberId}`;
+}
+
+// Takes a TripMember__c id.
+export function tripTicketUrl(tripMemberId: string) {
+  return `${SITE_URL}/tripTicket?id=${tripMemberId}`;
+}
+
 // Event and member photos are both ContentVersions behind the same proxy.
 // BASE_URL carries a trailing slash, which axios normalises but string
 // concatenation does not — the resulting // makes the host answer 308.

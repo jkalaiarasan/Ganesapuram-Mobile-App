@@ -2,14 +2,16 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, Animated, Image, RefreshControl, LayoutAnimation,
-  Platform, UIManager,
+  Platform, UIManager, Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useRefreshContext } from '../context/RefreshContext';
 import { ACCENT, SPACING, RADIUS, TYPE, FONT_FAMILY } from '../theme';
-import { fetchEvents, fetchEventDetail, imageUrl, logError } from '../api';
+import {
+  fetchEvents, fetchEventDetail, imageUrl, certificateUrl, tripTicketUrl, logError,
+} from '../api';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -115,17 +117,26 @@ function EventCard({ item, expanded, detail, loading, onToggle, theme }: {
                       <Text style={s.compName}>{c.name}</Text>
                       {c.winners.length === 0 ? (
                         <Text style={s.emptyInline}>முடிவுகள் இல்லை</Text>
-                      ) : c.winners.map(w => (
-                        <View key={w.id} style={s.winnerRow}>
-                          <Ionicons
-                            name="trophy"
-                            size={13}
-                            color={prizeColor(w.prize) ?? theme.textMuted}
-                          />
-                          <Text style={s.winnerName} numberOfLines={1}>{w.name}</Text>
-                          <Text style={s.winnerPrize}>{w.prize}</Text>
-                        </View>
-                      ))}
+                      ) : c.winners.map(w => {
+                        const isParticipant = (w.prize ?? '').toLowerCase().includes('participant');
+                        return (
+                          <TouchableOpacity
+                            key={w.id}
+                            activeOpacity={0.6}
+                            onPress={() => Linking.openURL(certificateUrl(w.id)).catch(() => {})}
+                            style={s.winnerRow}
+                          >
+                            <Ionicons
+                              name={isParticipant ? 'ribbon-outline' : 'trophy'}
+                              size={13}
+                              color={prizeColor(w.prize) ?? theme.textMuted}
+                            />
+                            <Text style={s.winnerName} numberOfLines={1}>{w.name}</Text>
+                            <Text style={s.winnerPrize}>{w.prize}</Text>
+                            <Ionicons name="download-outline" size={15} color={ACCENT.primary} />
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
                   ))}
                 </View>
@@ -134,14 +145,27 @@ function EventCard({ item, expanded, detail, loading, onToggle, theme }: {
               {detail.tripMembers.length > 0 && (
                 <View style={s.section}>
                   <Text style={s.sectionLabel}>பயணிகள் · {detail.tripMembers.length}</Text>
-                  {detail.tripMembers.slice(0, 40).map(m => (
-                    <View key={m.id} style={s.rosterRow}>
-                      <Text style={s.rosterName} numberOfLines={1}>{m.name}</Text>
-                      <View style={[s.statusChip, statusTone(m.status)]}>
-                        <Text style={[s.statusText, statusTone(m.status)]}>{m.status}</Text>
+                  {detail.tripMembers.slice(0, 40).map(m => {
+                    // The ticket only means anything once a seat is confirmed.
+                    const accepted = m.status.toLowerCase().includes('accept');
+                    return (
+                      <View key={m.id} style={s.rosterRow}>
+                        <Text style={s.rosterName} numberOfLines={1}>{m.name}</Text>
+                        <View style={[s.statusChip, statusTone(m.status)]}>
+                          <Text style={[s.statusText, statusTone(m.status)]}>{m.status}</Text>
+                        </View>
+                        {accepted && (
+                          <TouchableOpacity
+                            activeOpacity={0.6}
+                            hitSlop={8}
+                            onPress={() => Linking.openURL(tripTicketUrl(m.id)).catch(() => {})}
+                          >
+                            <Ionicons name="download-outline" size={16} color={ACCENT.primary} />
+                          </TouchableOpacity>
+                        )}
                       </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
 
@@ -350,7 +374,7 @@ const cardStyles = (theme: any) => StyleSheet.create({
   sectionLabel: { ...TYPE.caption, color: theme.textMuted, marginBottom: 8 },
   comp: { marginBottom: SPACING.sm },
   compName: { ...TYPE.bodyStrong, color: theme.text, marginBottom: 5 },
-  winnerRow: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 3 },
+  winnerRow: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 6 },
   winnerName: { ...TYPE.caption, color: theme.textSecondary, flex: 1 },
   winnerPrize: { ...TYPE.caption, fontSize: 10, color: theme.textMuted },
   rosterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 5, gap: 8 },
