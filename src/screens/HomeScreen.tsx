@@ -9,12 +9,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useRefreshContext } from '../context/RefreshContext';
 import { ACCENT, SPACING, RADIUS, TYPE, FONT_FAMILY } from '../theme';
-import { fetchKural, fetchWeather, logError } from '../api';
+import { fetchKural, fetchWeather, fetchTodaysBirthdays, logError } from '../api';
 
 interface KuralData {
   number: number; line1: string; line2: string;
   porul?: string; chapter?: string;
   urai1?: string; urai2?: string;
+}
+interface Birthday {
+  id: string; name: string; uprId: string | null;
+  position: string | null; turning: number | null;
 }
 interface WeatherData {
   location: { name: string; region: string };
@@ -41,6 +45,7 @@ export default function HomeScreen() {
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const coordsRef = useRef<{ lat: number; lon: number } | null>(null);
   const fade = useRef(new Animated.Value(0)).current;
 
@@ -89,14 +94,24 @@ export default function HomeScreen() {
     } catch (e: any) { console.warn('Location error:', e.message); }
   }, [usingCurrentLocation, loadWeather]);
 
-  useEffect(() => { loadKural(); loadWeather(); }, []);
+  // Quiet on failure — a missing birthday card should never disrupt the screen.
+  const loadBirthdays = useCallback(async () => {
+    try {
+      const data = await fetchTodaysBirthdays();
+      if (data.success) setBirthdays(data.birthdays ?? []);
+    } catch {
+      setBirthdays([]);
+    }
+  }, []);
+
+  useEffect(() => { loadKural(); loadWeather(); loadBirthdays(); }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     const c = coordsRef.current;
-    await Promise.all([loadKural(), loadWeather(c?.lat, c?.lon)]);
+    await Promise.all([loadKural(), loadWeather(c?.lat, c?.lon), loadBirthdays()]);
     setRefreshing(false);
-  }, [loadKural, loadWeather]);
+  }, [loadKural, loadWeather, loadBirthdays]);
 
   useEffect(() => {
     register('Home', onRefresh);
@@ -116,6 +131,30 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT.primary} />}
       >
         <Animated.View style={{ opacity: fade }}>
+
+          {/* ── Today's birthdays — only rendered when there are any ── */}
+          {birthdays.length > 0 && (
+            <View style={s.bdayCard}>
+              <View style={s.bdayHead}>
+                <Ionicons name="gift" size={17} color="#FF69B4" />
+                <Text style={s.bdayTitle}>இன்றைய பிறந்தநாள்</Text>
+              </View>
+              {birthdays.map(b => (
+                <View key={b.id} style={s.bdayRow}>
+                  <View style={s.bdayAvatar}>
+                    <Text style={s.bdayInitial}>{b.name?.[0]?.toUpperCase() ?? '?'}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.bdayName}>{b.name}</Text>
+                    <Text style={s.bdayMeta}>
+                      {[b.position, b.turning ? `${b.turning} வயது` : null]
+                        .filter(Boolean).join(' · ')}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* ── Thirukural ── */}
           <View style={s.card}>
@@ -321,4 +360,20 @@ const styles = (theme: any) => StyleSheet.create({
   retry:     { ...TYPE.bodyStrong, color: ACCENT.primary, marginTop: 4 },
 
   footer: { ...TYPE.caption, color: theme.textMuted, textAlign: 'center', marginTop: SPACING.sm },
+
+  bdayCard: {
+    backgroundColor: theme.card, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: 'rgba(255,105,180,0.35)',
+    padding: SPACING.md,
+  },
+  bdayHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm },
+  bdayTitle: { ...TYPE.heading, color: theme.text },
+  bdayRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  bdayAvatar: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,105,180,0.16)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  bdayInitial: { ...TYPE.bodyStrong, color: '#FF69B4' },
+  bdayName: { ...TYPE.bodyStrong, color: theme.text },
+  bdayMeta: { ...TYPE.caption, color: theme.textMuted, marginTop: 1 },
 });

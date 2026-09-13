@@ -110,6 +110,11 @@ export async function fetchEventDetail(eventId: string) {
   return res.data;
 }
 
+export async function fetchTodaysBirthdays() {
+  const res = await api.get('/api/community/birthdays/today');
+  return res.data;
+}
+
 export async function fetchCalendar() {
   const res = await api.get('/api/community/calendar');
   return res.data;
